@@ -9,7 +9,7 @@ interface CardProps {
     onClick?: () => void;
     playable?: boolean;
     isSelected?: boolean;
-    hidden?: boolean;
+    hidden?: boolean; // Fully hidden (opponent hand)
     small?: boolean;
     className?: string;
 }
@@ -49,26 +49,37 @@ const SuitIcon: React.FC<{ suit: Suit, className?: string }> = ({ suit, classNam
 export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playable = false, isSelected = false, hidden = false, small = false, className = '' }) => {
     
     // Responsive Dimensions
-    // Small: Used for Vira (tiny)
-    // Normal: Mobile (compact) -> Desktop (large)
     const sizeClasses = small 
         ? 'w-9 h-14 md:w-12 md:h-20 text-[9px] md:text-xs' 
         : 'w-11 h-20 md:w-24 md:h-36 text-sm md:text-lg';
 
-    if (hidden) {
-        return (
-            <div 
-                className={`
-                    relative rounded-lg shadow-md border-2 border-white bg-blue-900 
-                    ${sizeClasses}
-                    bg-opacity-90 flex items-center justify-center
-                    bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]
-                    ${className}
-                `}
-            >
-                <div className="w-full h-full border-2 border-blue-400 rounded-md opacity-20"></div>
-            </div>
-        );
+    // Renders the card back pattern
+    const CardBack = () => (
+        <div 
+            className={`
+                relative rounded-lg shadow-md border-2 border-white bg-blue-900 
+                ${sizeClasses}
+                bg-opacity-90 flex items-center justify-center
+                bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]
+                ${className}
+            `}
+        >
+            <div className="w-full h-full border-2 border-blue-400 rounded-md opacity-20"></div>
+        </div>
+    );
+
+    if (hidden) return <CardBack />;
+
+    // Played as "Carta Nula" / Covered
+    if (card.isCovered) {
+         return (
+             <div className="relative group">
+                 <CardBack />
+                 <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
+                    <span className="text-white text-[10px] md:text-xs font-bold uppercase opacity-80 rotate-45 border-2 border-white px-1">Nula</span>
+                 </div>
+             </div>
+         );
     }
 
     return (

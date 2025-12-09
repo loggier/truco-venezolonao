@@ -6,7 +6,7 @@ import { createDeck, WIN_SCORE } from './constants';
 import { determineWinner, calculateEnvidoPoints, calculateFlorPoints, checkHasFlor, shuffleDeck, calculateVenecoPower } from './services/trucoLogic';
 import { speak, playCardSound, playShuffleSound } from './services/soundService';
 import { GamePhase, PlayerState, CardData, CallType, Suit, ResponseRequest } from './types';
-import { AlertTriangle, Info, Hand, HelpCircle, X, PlayCircle, Flower2, Trophy } from 'lucide-react';
+import { AlertTriangle, Info, Hand, HelpCircle, X, PlayCircle, Flower2, Trophy, Ghost } from 'lucide-react';
 
 const INITIAL_PLAYER: PlayerState = { name: "Jugador", hand: [], playedCards: [], points: 0, isHand: true, hasFlor: false, florPoints: 0 };
 const INITIAL_CPU: PlayerState = { name: "Computadora", hand: [], playedCards: [], points: 0, isHand: false, hasFlor: false, florPoints: 0 };
@@ -152,7 +152,7 @@ const App: React.FC = () => {
             
             newDeck = newDeck.map(card => {
                 const { power, isPieza } = calculateVenecoPower(card, viraCard.suit);
-                return { ...card, power, isPieza };
+                return { ...card, power, isPieza, isCovered: false };
             });
 
             const pHand = newDeck.slice(0, 3);
@@ -201,7 +201,7 @@ const App: React.FC = () => {
 
     // --- Card Playing Logic ---
 
-    const playCard = (who: 'player' | 'cpu', cardId: number) => {
+    const playCard = (who: 'player' | 'cpu', cardId: number, isCovered: boolean = false) => {
         const actor = who === 'player' ? player : cpu;
         const card = actor.hand.find(c => c.id === cardId);
         if (!card) return;
@@ -209,7 +209,8 @@ const App: React.FC = () => {
         playCardSound();
 
         const newHand = actor.hand.filter(c => c.id !== cardId);
-        const newPlayed = [...actor.playedCards, card];
+        const playedCard = { ...card, isCovered }; // Mark as covered if requested
+        const newPlayed = [...actor.playedCards, playedCard];
 
         if (who === 'player') {
             setPlayer(p => ({ ...p, hand: newHand, playedCards: newPlayed }));
@@ -270,10 +271,18 @@ const App: React.FC = () => {
                  }
 
                  if (handWinner) {
-                     const points = trucoLevel === 0 ? 1 : trucoLevel; 
-                     addMessage(handWinner === 'player' ? `¡Ganaste! (+${points})` : `Perdiste. (+${points})`);
-                     if (handWinner === 'player') setPlayer(p => ({...p, points: p.points + points}));
-                     else setCpu(c => ({...c, points: c.points + points}));
+                     // VALE JUEGO Logic: If trucoLevel is maxed (Vale Juego), winner completes their score to WIN_SCORE
+                     let ptsToAdd = trucoLevel === 0 ? 1 : trucoLevel;
+                     
+                     if (trucoLevel >= WIN_SCORE) {
+                         const currentScore = handWinner === 'player' ? player.points : cpu.points;
+                         ptsToAdd = WIN_SCORE - currentScore; // Add strictly what's needed
+                     }
+
+                     addMessage(handWinner === 'player' ? `¡Ganaste! (+${ptsToAdd})` : `Perdiste. (+${ptsToAdd})`);
+                     
+                     if (handWinner === 'player') setPlayer(p => ({...p, points: Math.min(WIN_SCORE, p.points + ptsToAdd)}));
+                     else setCpu(c => ({...c, points: Math.min(WIN_SCORE, c.points + ptsToAdd)}));
                      
                      setTimeout(startNewHand, 2500);
                  } else {
@@ -352,7 +361,7 @@ const App: React.FC = () => {
         }
         
         const bestCard = selectBestCard(cpu.hand, player.playedCards, cpu.playedCards);
-        playCard('cpu', bestCard.id);
+        playCard('cpu', bestCard.id, false);
     };
 
     const hasGoodCards = (hand: CardData[]) => {
@@ -369,6 +378,9 @@ const App: React.FC = () => {
 
         const pCard = pPlayed[round];
         if (pCard) {
+            // Check if player played "Covered"
+            if (pCard.isCovered) return sorted[0]; // Any card beats -1, play lowest
+
             const winners = sorted.filter(c => c.power > pCard.power);
             if (winners.length > 0) return winners[0]; 
             return sorted[0]; 
@@ -520,7 +532,7 @@ const App: React.FC = () => {
             } else {
                 if (raiseCall === CallType.Retruco) newPoints = 6;
                 else if (raiseCall === CallType.ValeNueve) newPoints = 9;
-                else if (raiseCall === CallType.ValeJuego) newPoints = WIN_SCORE;
+                else if (raiseCall === CallType.ValeJuego) newPoints = WIN_SCORE; // VALE JUEGO: Max points
             }
 
             if (isResponderCpu) {
@@ -559,8 +571,8 @@ const App: React.FC = () => {
                  addMessage(msg);
                  speak(winner === 'player' ? `${pPts} son mejores.` : `${cPts} son mejores.`, isResponderCpu);
 
-                 if (winner === 'player') setPlayer(p => ({...p, points: p.points + 3})); 
-                 else setCpu(c => ({...c, points: c.points + 3}));
+                 if (winner === 'player') setPlayer(p => ({...p, points: Math.min(WIN_SCORE, p.points + 3)})); 
+                 else setCpu(c => ({...c, points: Math.min(WIN_SCORE, c.points + 3)}));
 
                  setChantState({ called: true, finished: true, points: 3, type: CallType.Flor });
             } 
@@ -573,6 +585,14 @@ const App: React.FC = () => {
                     const cPoints = calculateEnvidoPoints(cpuRef.current.hand, viraRef.current.suit);
                     
                     let winPoints = pointsAtStake;
+                    
+                    // Logic for Vale Juego in Envido (Rare but possible: "Falta Envido")
+                    if (pointsAtStake >= WIN_SCORE) {
+                        // Calculate remainder
+                        const leaderScore = Math.max(playerRef.current.points, cpuRef.current.points);
+                        winPoints = WIN_SCORE - leaderScore;
+                    }
+
                     let winner = '';
                     if (pPoints >= cPoints) {
                         if (pPoints === cPoints) winner = playerRef.current.isHand ? 'player' : 'cpu';
@@ -585,8 +605,8 @@ const App: React.FC = () => {
                     addMessage(msg);
                     speak(winner === 'player' ? `${pPoints} son mejores.` : `${cPoints} son mejores.`, isResponderCpu);
 
-                    if (winner === 'player') setPlayer(p => ({...p, points: p.points + winPoints}));
-                    else setCpu(c => ({...c, points: c.points + winPoints}));
+                    if (winner === 'player') setPlayer(p => ({...p, points: Math.min(WIN_SCORE, p.points + winPoints)}));
+                    else setCpu(c => ({...c, points: Math.min(WIN_SCORE, c.points + winPoints)}));
                     
                     setChantState({ called: true, finished: true, points: winPoints, type: call });
                 }
@@ -597,11 +617,12 @@ const App: React.FC = () => {
                 setLastTrucoCaller(caller);
             }
         } else {
+            // REJECTED
             if (type === 'flor') {
                 speak("Es buena", isResponderCpu);
                 addMessage(`${isResponderCpu ? 'CPU' : 'YO'}: ES BUENA (NO TENGO FLOR)`);
-                if (caller === 'player') setPlayer(p => ({...p, points: p.points + 3}));
-                else setCpu(c => ({...c, points: c.points + 3}));
+                if (caller === 'player') setPlayer(p => ({...p, points: Math.min(WIN_SCORE, p.points + 3)}));
+                else setCpu(c => ({...c, points: Math.min(WIN_SCORE, c.points + 3)}));
                 setChantState({ called: true, finished: true, points: 3, type: CallType.Flor });
             }
             else {
@@ -611,18 +632,21 @@ const App: React.FC = () => {
                 let rejectPoints = 1;
                 if (type === 'envido') {
                     if (pointsAtStake === 4) rejectPoints = 2; 
-                    else if (pointsAtStake > 4) rejectPoints = 4;
+                    else if (pointsAtStake > 4) rejectPoints = 4; // Falta envido rejected is usually points accumulated or 1
                     else rejectPoints = 1; 
                 }
                 else if (type === 'truco') {
                     if (call === CallType.Retruco) rejectPoints = 3;
                     else if (call === CallType.ValeNueve) rejectPoints = 6;
-                    else if (call === CallType.ValeJuego) rejectPoints = 9;
+                    else if (call === CallType.ValeJuego) rejectPoints = 9; // Rejecting Vale Juego gives previous level (9) or game rules
                     else rejectPoints = 1;
                 }
-
-                if (caller === 'player') setPlayer(p => ({...p, points: p.points + rejectPoints}));
-                else setCpu(c => ({...c, points: c.points + rejectPoints}));
+                
+                // If rejecting Vale Juego (Partido), typically you lose the points of the previous bet (e.g., 9)
+                
+                const winnerIsCaller = caller === 'player';
+                if (winnerIsCaller) setPlayer(p => ({...p, points: Math.min(WIN_SCORE, p.points + rejectPoints)}));
+                else setCpu(c => ({...c, points: Math.min(WIN_SCORE, c.points + rejectPoints)}));
 
                 if (type === 'envido') {
                     setChantState({ called: true, finished: true, points: 0, type: CallType.None });
@@ -640,16 +664,17 @@ const App: React.FC = () => {
         else setPhase(pCards < cCards ? GamePhase.PlayerTurn : GamePhase.CpuTurn);
     };
 
-    const handleHumanPlay = (cardId: number) => {
+    const handleHumanPlay = (cardId: number, asCovered: boolean = false) => {
         if (phase !== GamePhase.PlayerTurn) return;
         if (pendingResponse) { addMessage("¡Responde primero!"); return; }
-        playCard('player', cardId);
+        playCard('player', cardId, asCovered);
     };
 
     const handleCardClick = (cardId: number) => {
         if (phase !== GamePhase.PlayerTurn) { addMessage("Espera tu turno"); return; }
         if (pendingResponse) { addMessage("¡Responde primero!"); return; }
-        if (selectedCardId === cardId) playCard('player', cardId);
+        // Toggle selection
+        if (selectedCardId === cardId) setSelectedCardId(null);
         else setSelectedCardId(cardId);
     };
 
@@ -726,13 +751,22 @@ const App: React.FC = () => {
             const canSingRetruco = trucoLevel === 3 && lastTrucoCaller === 'cpu';
             const canSingVale9 = trucoLevel === 6 && lastTrucoCaller === 'cpu';
             const canSingJuego = trucoLevel === 9 && lastTrucoCaller === 'cpu';
+            const canPlayCovered = player.playedCards.length < 2; // Only in 1st or 2nd hand (0 or 1 played)
 
             return (
                 <div className="flex flex-col items-center space-y-2 md:space-y-3 w-full">
+                    {/* Action Buttons for Card Play */}
                     {selectedCardId !== null && (
-                         <button onClick={() => handleHumanPlay(selectedCardId)} className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-1.5 px-6 md:py-2 md:px-8 rounded-full shadow-lg flex items-center text-sm md:text-lg animate-in fade-in zoom-in">
-                            <PlayCircle className="mr-2" size={20} /> TIRAR CARTA
-                         </button>
+                         <div className="flex items-center gap-2 animate-in fade-in zoom-in">
+                             <button onClick={() => handleHumanPlay(selectedCardId, false)} className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-1.5 px-6 md:py-2 md:px-8 rounded-full shadow-lg flex items-center text-sm md:text-lg">
+                                <PlayCircle className="mr-2" size={20} /> TIRAR
+                             </button>
+                             {canPlayCovered && (
+                                 <button onClick={() => handleHumanPlay(selectedCardId, true)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-1.5 px-4 md:py-2 md:px-6 rounded-full shadow-lg flex items-center text-xs md:text-sm border border-gray-400">
+                                    <Ghost className="mr-2" size={16} /> PASAR
+                                 </button>
+                             )}
+                         </div>
                     )}
 
                     <div className="flex flex-wrap justify-center gap-2 bg-black/40 p-2 md:p-3 rounded-xl backdrop-blur-sm border border-white/10 w-full max-w-2xl">
@@ -756,7 +790,7 @@ const App: React.FC = () => {
                                 const phrase = getRandomPhrase(PHRASES.fold);
                                 addMessage("ME FUI"); 
                                 speak(phrase, false); 
-                                setCpu(c => ({...c, points: c.points + (trucoLevel || 1)})); 
+                                setCpu(c => ({...c, points: Math.min(WIN_SCORE, c.points + (trucoLevel || 1))})); 
                                 startNewHand(); 
                             }} className="btn-action bg-red-900 ml-1">
                                 ME VOY
@@ -785,7 +819,8 @@ const App: React.FC = () => {
                             <li><strong>Flor:</strong> Mata envido. Si tienes 3 del palo (o piezas).</li>
                             <li><strong>Perico (11 Vira):</strong> Pieza más alta.</li>
                             <li><strong>Perica (10 Vira):</strong> Segunda Pieza.</li>
-                            <li><strong>Puntos:</strong> Se juega a 24 tantos.</li>
+                            <li><strong>Vale Juego (Partido):</strong> Se juega el resto de los puntos para ganar.</li>
+                            <li><strong>Pasar (Nula):</strong> Juegas la carta boca abajo (tapada), valor 0.</li>
                         </ul>
                     </div>
                 </div>

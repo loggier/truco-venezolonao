@@ -12,6 +12,7 @@ export interface CardData {
     suit: Suit;
     power: number;
     isPieza?: boolean; // Perico or Perica
+    isCovered?: boolean; // New: If played as "Carta Nula" (Tapada)
 }
 
 export enum GamePhase {

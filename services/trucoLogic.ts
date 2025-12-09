@@ -143,7 +143,11 @@ export const calculateEnvidoPoints = (cards: CardData[], viraSuit: Suit): number
 
 
 export const determineWinner = (p1Card: CardData, p2Card: CardData): 'player' | 'cpu' | 'draw' => {
-    if (p1Card.power > p2Card.power) return 'player';
-    if (p2Card.power > p1Card.power) return 'cpu';
+    const p1Power = p1Card.isCovered ? -1 : p1Card.power;
+    const p2Power = p2Card.isCovered ? -1 : p2Card.power;
+
+    if (p1Power === -1 && p2Power === -1) return 'draw';
+    if (p1Power > p2Power) return 'player';
+    if (p2Power > p1Power) return 'cpu';
     return 'draw';
 };
