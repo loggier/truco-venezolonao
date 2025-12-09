@@ -50,10 +50,10 @@ export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playab
     
     // Responsive Dimensions
     // Small: Used for Vira (tiny)
-    // Normal: Mobile (w-16) -> Tablet/Desktop (w-24)
+    // Normal: Mobile (compact) -> Desktop (large)
     const sizeClasses = small 
-        ? 'w-10 h-16 md:w-12 md:h-20 text-[10px] md:text-xs' 
-        : 'w-[4.5rem] h-28 md:w-24 md:h-36 text-base md:text-lg';
+        ? 'w-9 h-14 md:w-12 md:h-20 text-[9px] md:text-xs' 
+        : 'w-11 h-20 md:w-24 md:h-36 text-sm md:text-lg';
 
     if (hidden) {
         return (
@@ -86,13 +86,13 @@ export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playab
             `}
         >
             {/* Top Left Number */}
-            <div className="w-full flex justify-start pl-1 font-bold font-serif text-gray-800 leading-none mt-1">
+            <div className="w-full flex justify-start pl-0.5 md:pl-1 font-bold font-serif text-gray-800 leading-none mt-0.5 md:mt-1">
                 {card.value}
             </div>
 
             {/* Center Art - Responsive Icon Size */}
-            <div className="flex-1 flex flex-col items-center justify-center space-y-1 w-full pointer-events-none overflow-hidden p-1">
-                <div className={`${small ? 'w-4 h-4' : 'w-8 h-8 md:w-10 md:h-10'}`}>
+            <div className="flex-1 flex flex-col items-center justify-center space-y-0.5 md:space-y-1 w-full pointer-events-none overflow-hidden p-0.5 md:p-1">
+                <div className={`${small ? 'w-3 h-3' : 'w-6 h-6 md:w-10 md:h-10'}`}>
                     <SuitIcon suit={card.suit} />
                 </div>
                 
@@ -101,7 +101,7 @@ export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playab
             </div>
 
             {/* Bottom Right Number (Inverted) */}
-            <div className="w-full flex justify-end pr-1 font-bold font-serif text-gray-800 transform rotate-180 leading-none mb-1">
+            <div className="w-full flex justify-end pr-0.5 md:pr-1 font-bold font-serif text-gray-800 transform rotate-180 leading-none mb-0.5 md:mb-1">
                 {card.value}
             </div>
 
