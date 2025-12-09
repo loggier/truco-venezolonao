@@ -1,0 +1,5 @@
+{
+  "name": "Truco Argentino Pro",
+  "description": "Una implementación premium del clásico juego de cartas Truco Argentino. Juega contra una IA avanzada en una mesa realista con gráficos detallados.",
+  "requestFramePermissions": []
+}

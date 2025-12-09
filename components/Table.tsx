@@ -1,0 +1,151 @@
+
+import React from 'react';
+import { Card } from './Card';
+import { PlayerState, GamePhase, CardData } from '../types';
+import { Loader2 } from 'lucide-react';
+
+interface TableProps {
+    player: PlayerState;
+    cpu: PlayerState;
+    onPlayCard: (cardId: number) => void;
+    onCardClick: (cardId: number) => void;
+    selectedCardId: number | null;
+    phase: GamePhase;
+    vira: CardData | null; // Added Vira prop
+}
+
+export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardClick, selectedCardId, phase, vira }) => {
+
+    const getStatusInfo = () => {
+        switch(phase) {
+            case GamePhase.PlayerTurn: 
+                return { text: "TU TURNO", color: "bg-green-600 border-green-400 text-white shadow-green-500/50" };
+            case GamePhase.CpuTurn: 
+                return { text: "TURNO RIVAL", color: "bg-red-800 border-red-600 text-red-100 shadow-red-500/50" };
+            case GamePhase.WaitingForResponse: 
+                return { text: "ESPERANDO...", color: "bg-yellow-600 border-yellow-400 text-yellow-100" };
+            case GamePhase.RoundResolution: 
+                return { text: "RESOLVIENDO...", color: "bg-blue-600 border-blue-400 text-blue-100" };
+            case GamePhase.Dealing: 
+                return { text: "BARAJANDO...", color: "bg-gray-700 border-gray-500 text-gray-300" };
+            case GamePhase.GameOver:
+                return { text: "FIN DEL JUEGO", color: "bg-purple-700 border-purple-500 text-white" };
+            default: 
+                return { text: "", color: "opacity-0" };
+        }
+    };
+
+    const status = getStatusInfo();
+
+    return (
+        <div className="relative w-full h-full flex flex-col items-center justify-between py-4">
+            
+            {/* CPU Label - Absolute Top */}
+            <div className={`absolute top-0 left-1/2 -translate-x-1/2 mt-2 z-20 flex items-center space-x-3 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 ${phase === GamePhase.CpuTurn ? 'bg-red-900/90 ring-2 ring-red-500 shadow-[0_0_20px_rgba(239,68,68,0.6)] scale-105' : 'bg-black/40 shadow-lg'}`}>
+                <div className="relative">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-red-800 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner">
+                        CPU
+                    </div>
+                    {phase === GamePhase.CpuTurn && (
+                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                        </span>
+                    )}
+                </div>
+                <div className="flex flex-col leading-none">
+                    <span className="text-white font-medium text-sm drop-shadow-md tracking-wide">{cpu.name}</span>
+                    {cpu.isHand && <span className="text-yellow-400 text-[10px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
+                </div>
+            </div>
+
+            {/* CPU Cards Area */}
+            <div className={`mt-14 flex flex-col items-center space-y-2 transition-all duration-500 ${phase === GamePhase.PlayerTurn ? 'opacity-60 scale-95' : 'opacity-100 scale-100'}`}>
+                {/* Cards Container */}
+                <div className="flex space-x-[-1rem]">
+                    {cpu.hand.map((card, idx) => (
+                        <div key={card.id} style={{ transform: `rotate(${(idx - 1) * 5}deg)` }}>
+                            <Card card={card} hidden={phase !== GamePhase.GameOver} /> 
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Center Play Area */}
+            <div className="flex-1 w-full flex items-center justify-center relative perspective-1000">
+                 
+                 {/* LA VIRA (La Muestra) */}
+                 {vira && (
+                    <div className="absolute left-2 lg:left-8 top-1/2 transform -translate-y-1/2 flex flex-col items-center opacity-90 animate-in fade-in zoom-in duration-700 z-0 pointer-events-none">
+                        <div className="text-yellow-200 font-bold text-[10px] lg:text-xs mb-1 tracking-widest uppercase text-shadow">La Vira</div>
+                        <div className="transform rotate-90 shadow-2xl border-2 border-yellow-500/50 rounded-lg">
+                            <Card card={vira} small className="scale-110 lg:scale-125 origin-center" />
+                        </div>
+                    </div>
+                 )}
+
+                 {/* Status Indicator - Moved to Right Side to avoid overlapping cards */}
+                 <div className="absolute right-2 lg:right-8 top-1/2 transform -translate-y-1/2 z-20 pointer-events-none flex flex-col items-end">
+                    {status.text && (
+                        <div className={`flex items-center px-4 py-3 rounded-xl font-bold tracking-widest shadow-2xl border-2 backdrop-blur-md transition-all duration-300 animate-in slide-in-from-right-10 ${status.color} max-w-[140px] lg:max-w-none text-center text-xs lg:text-sm`}>
+                            {phase === GamePhase.CpuTurn && <Loader2 className="animate-spin mr-2 shrink-0" size={16} />}
+                            {status.text}
+                        </div>
+                    )}
+                 </div>
+
+                 {/* Played Cards Drop Zone */}
+                 <div className="grid grid-cols-2 gap-8 lg:gap-16 relative">
+                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-32 flex space-x-4">
+                        {cpu.playedCards.map((card, i) => (
+                            card ? <div key={`cpu-played-${i}`} className="animate-in fade-in zoom-in duration-300 shadow-xl transform rotate-3"><Card card={card} /></div> : null
+                        ))}
+                     </div>
+                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 translate-y-2 flex space-x-4">
+                        {player.playedCards.map((card, i) => (
+                            card ? <div key={`pl-played-${i}`} className="animate-in fade-in zoom-in duration-300 shadow-xl transform -rotate-3"><Card card={card} /></div> : null
+                        ))}
+                     </div>
+                 </div>
+            </div>
+
+            {/* Player Area */}
+            <div className={`flex flex-col items-center space-y-4 mb-4 transition-all duration-500 ${phase === GamePhase.CpuTurn ? 'opacity-80 scale-95' : 'opacity-100 scale-100'}`}>
+                 <div className="flex space-x-4">
+                    {player.hand.map((card, idx) => (
+                        <div key={card.id} 
+                             className={`transform transition-transform duration-300 ${selectedCardId === card.id ? '' : 'hover:-translate-y-4'} ${player.playedCards.length === cpu.playedCards.length || (player.isHand && player.playedCards.length === cpu.playedCards.length) ? '' : ''}`}
+                             style={{ transform: `translateY(${idx%2===0 ? '0px' : '4px'}) rotate(${(idx - 1) * 3}deg)` }}
+                        >
+                            <Card 
+                                card={card} 
+                                playable={phase === GamePhase.PlayerTurn} 
+                                isSelected={selectedCardId === card.id}
+                                onClick={() => onCardClick(card.id)}
+                                onDoubleClick={() => onPlayCard(card.id)}
+                            />
+                        </div>
+                    ))}
+                </div>
+                <div className={`flex items-center space-x-3 px-4 py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 ${phase === GamePhase.PlayerTurn ? 'bg-green-900/80 ring-2 ring-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-black/30'}`}>
+                   <div className="relative">
+                       <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner">
+                            YO
+                       </div>
+                        {phase === GamePhase.PlayerTurn && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                            </span>
+                       )}
+                   </div>
+                   <div className="flex flex-col leading-none">
+                       <span className="text-white font-medium text-sm drop-shadow-md">{player.name}</span>
+                       {player.isHand && <span className="text-yellow-400 text-[10px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
+                   </div>
+                </div>
+            </div>
+            
+        </div>
+    );
+};
