@@ -11,7 +11,7 @@ interface TableProps {
     onCardClick: (cardId: number) => void;
     selectedCardId: number | null;
     phase: GamePhase;
-    vira: CardData | null; // Added Vira prop
+    vira: CardData | null;
 }
 
 export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardClick, selectedCardId, phase, vira }) => {
@@ -38,30 +38,29 @@ export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardCli
     const status = getStatusInfo();
 
     return (
-        <div className="relative w-full h-full flex flex-col items-center justify-between py-4">
+        <div className="relative w-full h-full flex flex-col items-center justify-between py-2 md:py-4 overflow-hidden">
             
             {/* CPU Label - Absolute Top */}
-            <div className={`absolute top-0 left-1/2 -translate-x-1/2 mt-2 z-20 flex items-center space-x-3 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 ${phase === GamePhase.CpuTurn ? 'bg-red-900/90 ring-2 ring-red-500 shadow-[0_0_20px_rgba(239,68,68,0.6)] scale-105' : 'bg-black/40 shadow-lg'}`}>
+            <div className={`absolute top-0 left-1/2 -translate-x-1/2 mt-1 md:mt-2 z-20 flex items-center space-x-2 md:space-x-3 px-3 py-1 md:px-4 md:py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 ${phase === GamePhase.CpuTurn ? 'bg-red-900/90 ring-2 ring-red-500 shadow-[0_0_20px_rgba(239,68,68,0.6)] scale-105' : 'bg-black/40 shadow-lg'}`}>
                 <div className="relative">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-red-800 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner">
+                    <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-red-500 to-red-800 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner text-xs md:text-sm">
                         CPU
                     </div>
                     {phase === GamePhase.CpuTurn && (
-                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="absolute -top-1 -right-1 flex h-2 w-2 md:h-3 md:w-3">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                            <span className="relative inline-flex rounded-full h-full w-full bg-yellow-500"></span>
                         </span>
                     )}
                 </div>
                 <div className="flex flex-col leading-none">
-                    <span className="text-white font-medium text-sm drop-shadow-md tracking-wide">{cpu.name}</span>
-                    {cpu.isHand && <span className="text-yellow-400 text-[10px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
+                    <span className="text-white font-medium text-xs md:text-sm drop-shadow-md tracking-wide">{cpu.name}</span>
+                    {cpu.isHand && <span className="text-yellow-400 text-[8px] md:text-[10px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
                 </div>
             </div>
 
             {/* CPU Cards Area */}
-            <div className={`mt-14 flex flex-col items-center space-y-2 transition-all duration-500 ${phase === GamePhase.PlayerTurn ? 'opacity-60 scale-95' : 'opacity-100 scale-100'}`}>
-                {/* Cards Container */}
+            <div className={`mt-10 md:mt-14 flex flex-col items-center space-y-2 transition-all duration-500 ${phase === GamePhase.PlayerTurn ? 'opacity-60 scale-95' : 'opacity-100 scale-100'}`}>
                 <div className="flex space-x-[-1rem]">
                     {cpu.hand.map((card, idx) => (
                         <div key={card.id} style={{ transform: `rotate(${(idx - 1) * 5}deg)` }}>
@@ -76,32 +75,32 @@ export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardCli
                  
                  {/* LA VIRA (La Muestra) */}
                  {vira && (
-                    <div className="absolute left-2 lg:left-8 top-1/2 transform -translate-y-1/2 flex flex-col items-center opacity-90 animate-in fade-in zoom-in duration-700 z-0 pointer-events-none">
-                        <div className="text-yellow-200 font-bold text-[10px] lg:text-xs mb-1 tracking-widest uppercase text-shadow">La Vira</div>
+                    <div className="absolute left-1 md:left-2 lg:left-8 top-1/2 transform -translate-y-1/2 flex flex-col items-center opacity-90 animate-in fade-in zoom-in duration-700 z-0 pointer-events-none">
+                        <div className="text-yellow-200 font-bold text-[8px] md:text-[10px] lg:text-xs mb-1 tracking-widest uppercase text-shadow">La Vira</div>
                         <div className="transform rotate-90 shadow-2xl border-2 border-yellow-500/50 rounded-lg">
-                            <Card card={vira} small className="scale-110 lg:scale-125 origin-center" />
+                            <Card card={vira} small className="scale-90 md:scale-110 lg:scale-125 origin-center" />
                         </div>
                     </div>
                  )}
 
-                 {/* Status Indicator - Moved to Right Side to avoid overlapping cards */}
-                 <div className="absolute right-2 lg:right-8 top-1/2 transform -translate-y-1/2 z-20 pointer-events-none flex flex-col items-end">
+                 {/* Status Indicator */}
+                 <div className="absolute right-1 md:right-2 lg:right-8 top-1/2 transform -translate-y-1/2 z-20 pointer-events-none flex flex-col items-end">
                     {status.text && (
-                        <div className={`flex items-center px-4 py-3 rounded-xl font-bold tracking-widest shadow-2xl border-2 backdrop-blur-md transition-all duration-300 animate-in slide-in-from-right-10 ${status.color} max-w-[140px] lg:max-w-none text-center text-xs lg:text-sm`}>
-                            {phase === GamePhase.CpuTurn && <Loader2 className="animate-spin mr-2 shrink-0" size={16} />}
+                        <div className={`flex items-center px-3 py-2 md:px-4 md:py-3 rounded-xl font-bold tracking-widest shadow-2xl border-2 backdrop-blur-md transition-all duration-300 animate-in slide-in-from-right-10 ${status.color} max-w-[100px] md:max-w-[140px] lg:max-w-none text-center text-[10px] md:text-xs lg:text-sm`}>
+                            {phase === GamePhase.CpuTurn && <Loader2 className="animate-spin mr-1 md:mr-2 shrink-0" size={14} />}
                             {status.text}
                         </div>
                     )}
                  </div>
 
                  {/* Played Cards Drop Zone */}
-                 <div className="grid grid-cols-2 gap-8 lg:gap-16 relative">
-                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-32 flex space-x-4">
+                 <div className="grid grid-cols-2 gap-4 md:gap-8 lg:gap-16 relative">
+                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-24 md:-translate-y-32 flex space-x-2 md:space-x-4">
                         {cpu.playedCards.map((card, i) => (
                             card ? <div key={`cpu-played-${i}`} className="animate-in fade-in zoom-in duration-300 shadow-xl transform rotate-3"><Card card={card} /></div> : null
                         ))}
                      </div>
-                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 translate-y-2 flex space-x-4">
+                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 translate-y-4 md:translate-y-2 flex space-x-2 md:space-x-4">
                         {player.playedCards.map((card, i) => (
                             card ? <div key={`pl-played-${i}`} className="animate-in fade-in zoom-in duration-300 shadow-xl transform -rotate-3"><Card card={card} /></div> : null
                         ))}
@@ -110,11 +109,11 @@ export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardCli
             </div>
 
             {/* Player Area */}
-            <div className={`flex flex-col items-center space-y-4 mb-4 transition-all duration-500 ${phase === GamePhase.CpuTurn ? 'opacity-80 scale-95' : 'opacity-100 scale-100'}`}>
-                 <div className="flex space-x-4">
+            <div className={`flex flex-col items-center space-y-2 md:space-y-4 mb-2 md:mb-4 transition-all duration-500 ${phase === GamePhase.CpuTurn ? 'opacity-80 scale-95' : 'opacity-100 scale-100'}`}>
+                 <div className="flex space-x-2 md:space-x-4">
                     {player.hand.map((card, idx) => (
                         <div key={card.id} 
-                             className={`transform transition-transform duration-300 ${selectedCardId === card.id ? '' : 'hover:-translate-y-4'} ${player.playedCards.length === cpu.playedCards.length || (player.isHand && player.playedCards.length === cpu.playedCards.length) ? '' : ''}`}
+                             className={`transform transition-transform duration-300 ${selectedCardId === card.id ? '' : 'hover:-translate-y-2 md:hover:-translate-y-4'} ${player.playedCards.length === cpu.playedCards.length || (player.isHand && player.playedCards.length === cpu.playedCards.length) ? '' : ''}`}
                              style={{ transform: `translateY(${idx%2===0 ? '0px' : '4px'}) rotate(${(idx - 1) * 3}deg)` }}
                         >
                             <Card 
@@ -127,21 +126,21 @@ export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardCli
                         </div>
                     ))}
                 </div>
-                <div className={`flex items-center space-x-3 px-4 py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 ${phase === GamePhase.PlayerTurn ? 'bg-green-900/80 ring-2 ring-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-black/30'}`}>
+                <div className={`flex items-center space-x-2 md:space-x-3 px-3 py-1 md:px-4 md:py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 ${phase === GamePhase.PlayerTurn ? 'bg-green-900/80 ring-2 ring-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-black/30'}`}>
                    <div className="relative">
-                       <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner">
+                       <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner text-xs md:text-sm">
                             YO
                        </div>
                         {phase === GamePhase.PlayerTurn && (
-                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="absolute -top-1 -right-1 flex h-2 w-2 md:h-3 md:w-3">
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                              <span className="relative inline-flex rounded-full h-full w-full bg-green-500"></span>
                             </span>
                        )}
                    </div>
                    <div className="flex flex-col leading-none">
-                       <span className="text-white font-medium text-sm drop-shadow-md">{player.name}</span>
-                       {player.isHand && <span className="text-yellow-400 text-[10px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
+                       <span className="text-white font-medium text-xs md:text-sm drop-shadow-md">{player.name}</span>
+                       {player.isHand && <span className="text-yellow-400 text-[8px] md:text-[10px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
                    </div>
                 </div>
             </div>

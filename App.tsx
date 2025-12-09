@@ -50,27 +50,27 @@ const Confetti: React.FC = () => {
 
 // --- PHRASES BANK ---
 const PHRASES = {
-    bluffSuccess: [ // CPU lied and Player folded
+    bluffSuccess: [
         "¡Jajaja, te corrí con un cuatro!",
         "Puro ruido compadre.",
         "Te asustaste muy rápido.",
         "¡Era mentira chico!",
         "Cayó la paloma."
     ],
-    caughtBluffing: [ // CPU lied and Player accepted
+    caughtBluffing: [
         "Ay mamá...",
         "Bueno, a ver qué traes.",
         "Se me cayó la cédula.",
         "Upa, te pusiste bravo.",
         "Ya va, déjame ver bien las cartas."
     ],
-    singingBluff: [ // When initiating a lie
+    singingBluff: [
         "¡TRUCO! Y no estoy jugando.",
         "¡Envido! Agárrate duro que voy.",
         "¡Falta Envido! A ver si eres guapo.",
         "¡TRUCO! Cuidado que muerdo."
     ],
-    raising: [ // When CPU raises back
+    raising: [
         "¡Quiero y te la parto en dos!",
         "¡Quiero y Envido!",
         "¿Ah sí? ¡Entonces Retruco!",
@@ -111,7 +111,6 @@ const App: React.FC = () => {
     const [trucoLevel, setTrucoLevel] = useState(0); 
     const [lastTrucoCaller, setLastTrucoCaller] = useState<'player' | 'cpu' | null>(null);
     
-    // Unified Chant State (Envido / Flor)
     const [chantState, setChantState] = useState<{ called: boolean, finished: boolean, points: number, type: CallType }>({ 
         called: false, finished: false, points: 0, type: CallType.None 
     });
@@ -119,7 +118,7 @@ const App: React.FC = () => {
     const [pendingResponse, setPendingResponse] = useState<ResponseRequest | null>(null);
     const [lastActionMessage, setLastActionMessage] = useState<string>("");
     const [cpuThinking, setCpuThinking] = useState(false);
-    const [lastCpuBluff, setLastCpuBluff] = useState(false); // To track if CPU is lying
+    const [lastCpuBluff, setLastCpuBluff] = useState(false); 
     
     const playerRef = useRef(player);
     const cpuRef = useRef(cpu);
@@ -141,12 +140,10 @@ const App: React.FC = () => {
     const startNewHand = useCallback(() => {
         if (playerRef.current.points >= WIN_SCORE || cpuRef.current.points >= WIN_SCORE) return;
 
-        // 1. Enter Dealing Phase (Visual pause)
         setPhase(GamePhase.Dealing);
         playShuffleSound();
         addMessage("Barajando...");
 
-        // 2. Wait 2 seconds before dealing
         setTimeout(() => {
             let newDeck = shuffleDeck(createDeck());
             
@@ -163,7 +160,6 @@ const App: React.FC = () => {
             
             const pIsHand = !playerRef.current.isHand; 
 
-            // Pre-calculate Flor
             const pHasFlor = checkHasFlor(pHand, viraCard.suit);
             const pFlorPts = calculateFlorPoints(pHand, viraCard.suit);
             const cHasFlor = checkHasFlor(cHand, viraCard.suit);
@@ -183,12 +179,11 @@ const App: React.FC = () => {
             
             setPhase(pIsHand ? GamePhase.PlayerTurn : GamePhase.CpuTurn);
             addMessage(pIsHand ? "Tu turno (Mano)" : "Turno CPU (Mano)");
-        }, 2000); // 2 Second delay for shuffling effect
+        }, 2000); 
 
     }, []);
 
     useEffect(() => {
-        // Initial load
         startNewHand();
     }, []);
 
@@ -250,7 +245,6 @@ const App: React.FC = () => {
                  newWinners[roundIdx] = winner;
                  setRoundWinners(newWinners);
 
-                 // Hand Winner Logic
                  let handWinner: 'player' | 'cpu' | null = null;
                  
                  const pWins = newWinners.filter(w => w === 'player').length;
@@ -259,7 +253,6 @@ const App: React.FC = () => {
                  if (pWins >= 2) handWinner = 'player';
                  else if (cWins >= 2) handWinner = 'cpu';
                  else {
-                     // Check Pardas (Draws)
                      const r1 = newWinners[0];
                      const r2 = newWinners[1];
                      const r3 = newWinners[2];
@@ -323,16 +316,11 @@ const App: React.FC = () => {
         const scoreDiff = cpu.points - player.points;
         const isDesperate = scoreDiff < -5;
 
-        // 1. Chant Logic (Flor / Envido)
         if (player.playedCards.length === 0 && cpu.playedCards.length === 0 && !chantState.called && !chantState.finished) {
-            
-            // A. Check Flor
             if (cpu.hasFlor) {
                 triggerRequest('cpu', 'flor', CallType.Flor, 3);
                 return;
             }
-
-            // B. Envido Logic (With Bluffing)
             if (viraRef.current) {
                 const myPoints = calculateEnvidoPoints(cpu.hand, viraRef.current.suit);
                 const goodPoints = myPoints >= 26;
@@ -349,7 +337,6 @@ const App: React.FC = () => {
             }
         }
 
-        // 2. Truco Logic (With Bluffing)
         if (trucoLevel === 0) {
             const hasGood = hasGoodCards(cpu.hand);
             const fakeTruco = !hasGood && (bluffChance > 0.85 || (isDesperate && bluffChance > 0.7));
@@ -364,7 +351,6 @@ const App: React.FC = () => {
             }
         }
         
-        // 3. Play Card
         const bestCard = selectBestCard(cpu.hand, player.playedCards, cpu.playedCards);
         playCard('cpu', bestCard.id);
     };
@@ -399,7 +385,6 @@ const App: React.FC = () => {
 
         const isCpu = who === 'cpu';
         if (isCpu && lastCpuBluff) {
-            // Already spoke
         } else {
             if (call === CallType.Truco) speak("¡Truco!", isCpu);
             else if (call === CallType.Retruco) speak("¡Retruco!", isCpu);
@@ -433,10 +418,6 @@ const App: React.FC = () => {
              if (viraRef.current) {
                 const myPoints = calculateEnvidoPoints(myCards, viraRef.current.suit);
                 
-                // CPU Raise Logic for Envido
-                // Ladder: Envido (2) -> Envido (4) -> Vale Juego
-                
-                // 1. Can we raise to Vale Juego? Only if current stake is >= 4
                 if (pointsAtStake >= 4 && myPoints >= 31) {
                      if (pointsAtStake < WIN_SCORE) {
                          handleResponse(false, true, CallType.ValeJuego);
@@ -445,24 +426,20 @@ const App: React.FC = () => {
                      }
                 }
 
-                // 2. Can we raise to Envido (4)? Only if current stake is 2
                 if (pointsAtStake === 2 && myPoints >= 28) {
                     handleResponse(false, true, CallType.Envido);
                     speak("¡Quiero y Envido!", true);
                     return;
                 }
                 
-                // 3. Just accept
                 if (myPoints >= 26) { handleResponse(true); return; }
                 
-                // Bluffing raise (Follows ladder)
                 if (bluffChance > 0.9) {
                      setLastCpuBluff(true);
                      if (pointsAtStake === 2) {
                         handleResponse(false, true, CallType.Envido);
                         speak("¡Quiero y Envido! (Mentira)", true);
                      } else {
-                         // Don't bluff Vale Juego lightly
                          handleResponse(false);
                      }
                      return;
@@ -472,7 +449,6 @@ const App: React.FC = () => {
              }
         } 
         else {
-            // TRUCO LOGIC
             const matas = myCards.filter(c => c.power >= 80).length;
             const decent = myCards.filter(c => c.power >= 50).length;
             
@@ -485,17 +461,14 @@ const App: React.FC = () => {
             let raise = false;
             let fakeRaise = false;
 
-            // Determine if we should accept
             if (confidence >= 1) accept = true;
             if (call === CallType.Retruco && confidence < 2) accept = false;
             if (call === CallType.ValeNueve && confidence < 2) accept = false;
             if (call === CallType.ValeJuego && confidence < 3) accept = false;
 
-            // Determine if we should raise back (Counter-attack)
             if (confidence >= 2 && Math.random() > 0.4) raise = true;
             if (confidence >= 3) raise = true;
 
-            // Bluffing
             if (confidence === 0 && bluffChance > 0.85) { raise = true; fakeRaise = true; }
 
             if (raise) {
@@ -541,24 +514,18 @@ const App: React.FC = () => {
             }
 
             if (type === 'envido') {
-                 // Ladder Logic:
-                 // If responding to Envido (2) with Envido (Raise), points become 4
-                 // If responding to Envido (4) with Vale Juego, points become Game
                  if (raiseCall === CallType.Envido) newPoints = 4;
                  else if (raiseCall === CallType.ValeJuego) newPoints = WIN_SCORE;
                  else newPoints = pointsAtStake + 2; 
             } else {
-                // Truco Chain
                 if (raiseCall === CallType.Retruco) newPoints = 6;
                 else if (raiseCall === CallType.ValeNueve) newPoints = 9;
                 else if (raiseCall === CallType.ValeJuego) newPoints = WIN_SCORE;
             }
 
-            // Play Raise Sound/Speech
             if (isResponderCpu) {
                 speak(getRandomPhrase(PHRASES.raising), true);
             } else {
-                // If Player raised
                 if (raiseCall === CallType.Envido) speak("¡Quiero y Envido!", false);
                 else if (raiseCall === CallType.ValeJuego) speak("¡Quiero y Vale Juego!", false);
                 else if (raiseCall === CallType.Retruco) speak("¡Quiero y Retruco!", false);
@@ -630,7 +597,6 @@ const App: React.FC = () => {
                 setLastTrucoCaller(caller);
             }
         } else {
-            // Reject logic
             if (type === 'flor') {
                 speak("Es buena", isResponderCpu);
                 addMessage(`${isResponderCpu ? 'CPU' : 'YO'}: ES BUENA (NO TENGO FLOR)`);
@@ -642,17 +608,13 @@ const App: React.FC = () => {
                 speak("No quiero", isResponderCpu);
                 addMessage(`${isResponderCpu ? 'CPU' : 'YO'}: NO QUIERO`);
                 
-                // Calculate rejection cost
                 let rejectPoints = 1;
                 if (type === 'envido') {
-                    // If rejecting a Raise, you lose the PREVIOUS bet.
-                    // E.g. Envido (2) -> Raise Envido (4). Rejecting gives 2.
-                    if (pointsAtStake === 4) rejectPoints = 2; // Rejecting Envido 4 gives 2
-                    else if (pointsAtStake > 4) rejectPoints = 4; // Rejecting Vale Juego (after envido 4) gives 4
-                    else rejectPoints = 1; // Rejecting first Envido gives 1
+                    if (pointsAtStake === 4) rejectPoints = 2; 
+                    else if (pointsAtStake > 4) rejectPoints = 4;
+                    else rejectPoints = 1; 
                 }
                 else if (type === 'truco') {
-                    // If rejecting Retruco (6), you lose Truco (3).
                     if (call === CallType.Retruco) rejectPoints = 3;
                     else if (call === CallType.ValeNueve) rejectPoints = 6;
                     else if (call === CallType.ValeJuego) rejectPoints = 9;
@@ -672,14 +634,11 @@ const App: React.FC = () => {
         }
 
         setPendingResponse(null);
-        // Resume turn
         const pCards = playerRef.current.playedCards.length;
         const cCards = cpuRef.current.playedCards.length;
         if (pCards === cCards) setPhase(playerRef.current.isHand ? GamePhase.PlayerTurn : GamePhase.CpuTurn);
         else setPhase(pCards < cCards ? GamePhase.PlayerTurn : GamePhase.CpuTurn);
     };
-
-    // --- UI Handlers ---
 
     const handleHumanPlay = (cardId: number) => {
         if (phase !== GamePhase.PlayerTurn) return;
@@ -708,7 +667,7 @@ const App: React.FC = () => {
     // --- Dynamic Controls ---
     const renderActionControls = () => {
         if (phase === GamePhase.GameOver) {
-            return ( <button onClick={() => window.location.reload()} className="px-8 py-4 bg-yellow-600 text-white font-bold text-xl rounded-full shadow-2xl animate-bounce">JUGAR OTRA VEZ</button> );
+            return ( <button onClick={() => window.location.reload()} className="px-6 py-3 md:px-8 md:py-4 bg-yellow-600 text-white font-bold text-lg md:text-xl rounded-full shadow-2xl animate-bounce">JUGAR OTRA VEZ</button> );
         }
 
         if (pendingResponse && pendingResponse.caller === 'cpu') {
@@ -716,13 +675,12 @@ const App: React.FC = () => {
             const isFlor = type === 'flor';
             
             return (
-                <div className="flex flex-col items-center w-full bg-black/60 p-4 rounded-xl backdrop-blur-md border border-red-500/50">
-                    <div className="text-white font-bold mb-3 flex items-center text-xl animate-pulse">
-                        <AlertTriangle className="mr-2 text-yellow-500"/> CPU: {call.replace('Vale', '').toUpperCase()}
+                <div className="flex flex-col items-center w-full bg-black/60 p-2 md:p-4 rounded-xl backdrop-blur-md border border-red-500/50">
+                    <div className="text-white font-bold mb-2 md:mb-3 flex items-center text-sm md:text-xl animate-pulse">
+                        <AlertTriangle className="mr-2 text-yellow-500" size={20}/> CPU: {call.replace('Vale', '').toUpperCase()}
                     </div>
-                    <div className="flex flex-wrap justify-center gap-3">
+                    <div className="flex flex-wrap justify-center gap-2 md:gap-3">
                         {isFlor ? (
-                            // Special buttons for responding to Flor
                             <>
                                 {player.hasFlor && <button onClick={() => handleResponse(true)} className="btn-action bg-pink-600">QUIERO CON FLOR</button>}
                                 <button onClick={() => handleResponse(false)} className="btn-action bg-gray-600">ES BUENA (NO TENGO)</button>
@@ -736,7 +694,6 @@ const App: React.FC = () => {
                                      <button onClick={() => handleResponse(false, true, CallType.Flor)} className="btn-action bg-pink-600 border border-white animate-pulse shadow-[0_0_15px_rgba(219,39,119,0.8)]">¡TENGO FLOR!</button>
                                 )}
 
-                                {/* Truco Chain Raises */}
                                 {type === 'truco' && (
                                     <>
                                         {call === CallType.Truco && <button onClick={() => handleResponse(false, true, CallType.Retruco)} className="btn-action bg-orange-700">RETRUCO</button>}
@@ -745,15 +702,11 @@ const App: React.FC = () => {
                                     </>
                                 )}
 
-                                {/* Envido Chain Raises - Strict Ladder: 2 -> 4 -> Game */}
                                 {type === 'envido' && (
                                     <>
-                                        {/* If we are at Envido (2), we can raise to Envido (4) */}
                                         {call === CallType.Envido && pendingResponse.pointsAtStake === 2 && (
                                              <button onClick={() => handleResponse(false, true, CallType.Envido)} className="btn-action bg-green-700">ENVIDO (+2)</button>
                                         )}
-                                        
-                                        {/* If we are at Envido (4) or higher, we can raise to Vale Juego */}
                                         {pendingResponse.pointsAtStake >= 4 && call !== CallType.ValeJuego && (
                                             <button onClick={() => handleResponse(false, true, CallType.ValeJuego)} className="btn-action bg-purple-800">VALE JUEGO</button>
                                         )}
@@ -775,27 +728,25 @@ const App: React.FC = () => {
             const canSingJuego = trucoLevel === 9 && lastTrucoCaller === 'cpu';
 
             return (
-                <div className="flex flex-col items-center space-y-3">
+                <div className="flex flex-col items-center space-y-2 md:space-y-3 w-full">
                     {selectedCardId !== null && (
-                         <button onClick={() => handleHumanPlay(selectedCardId)} className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-8 rounded-full shadow-lg flex items-center text-lg animate-in fade-in zoom-in">
-                            <PlayCircle className="mr-2" /> TIRAR CARTA
+                         <button onClick={() => handleHumanPlay(selectedCardId)} className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-1.5 px-6 md:py-2 md:px-8 rounded-full shadow-lg flex items-center text-sm md:text-lg animate-in fade-in zoom-in">
+                            <PlayCircle className="mr-2" size={20} /> TIRAR CARTA
                          </button>
                     )}
 
-                    <div className="flex flex-wrap justify-center gap-2 bg-black/40 p-3 rounded-xl backdrop-blur-sm border border-white/10">
-                        {/* Flor / Envido Section */}
+                    <div className="flex flex-wrap justify-center gap-2 bg-black/40 p-2 md:p-3 rounded-xl backdrop-blur-sm border border-white/10 w-full max-w-2xl">
                         {canSingChant && (
-                            <div className="flex gap-1 border-r border-white/20 pr-3 mr-1">
+                            <div className="flex gap-1 border-r border-white/20 pr-2 mr-1">
                                 {player.hasFlor ? (
-                                    <button onClick={() => userCalls('flor', CallType.Flor)} className="btn-action bg-pink-700 flex items-center"><Flower2 size={16} className="mr-1"/> FLOR</button>
+                                    <button onClick={() => userCalls('flor', CallType.Flor)} className="btn-action bg-pink-700 flex items-center"><Flower2 size={14} className="mr-1"/> FLOR</button>
                                 ) : (
                                     <button onClick={() => userCalls('envido', CallType.Envido)} className="btn-action bg-green-700">Envido</button>
                                 )}
                             </div>
                         )}
                         
-                        {/* Truco Section */}
-                        <div className="flex gap-1">
+                        <div className="flex flex-wrap justify-center gap-1">
                             {canSingTruco && <button onClick={() => userCalls('truco', CallType.Truco)} className="btn-action bg-orange-600 font-black">TRUCO (3)</button>}
                             {canSingRetruco && <button onClick={() => userCalls('truco', CallType.Retruco)} className="btn-action bg-orange-700 font-black">RETRUCO (6)</button>}
                             {canSingVale9 && <button onClick={() => userCalls('truco', CallType.ValeNueve)} className="btn-action bg-orange-800 font-black">VALE 9</button>}
@@ -807,7 +758,7 @@ const App: React.FC = () => {
                                 speak(phrase, false); 
                                 setCpu(c => ({...c, points: c.points + (trucoLevel || 1)})); 
                                 startNewHand(); 
-                            }} className="btn-action bg-red-900 ml-2">
+                            }} className="btn-action bg-red-900 ml-1">
                                 ME VOY
                             </button>
                         </div>
@@ -823,14 +774,14 @@ const App: React.FC = () => {
         <div className="w-screen h-screen bg-neutral-900 overflow-hidden relative flex flex-col font-sans select-none">
             {phase === GamePhase.GameOver && player.points >= WIN_SCORE && <Confetti />}
 
-            <button onClick={() => setShowHelp(true)} className="absolute top-4 left-4 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm"><HelpCircle size={28} /></button>
+            <button onClick={() => setShowHelp(true)} className="absolute top-2 left-2 md:top-4 md:left-4 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm"><HelpCircle size={20} className="md:w-7 md:h-7" /></button>
             
             {showHelp && (
                 <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                     <div className="bg-[#5d4037] border-4 border-yellow-600 rounded-lg max-w-lg w-full p-6 text-yellow-100 shadow-2xl">
                         <button onClick={() => setShowHelp(false)} className="absolute top-2 right-2 p-1 hover:bg-black/20 rounded-full"><X size={24} /></button>
-                        <h2 className="text-2xl font-bold font-serif text-center mb-4 text-yellow-400">Truco Venezolano</h2>
-                        <ul className="space-y-2 text-sm">
+                        <h2 className="text-xl md:text-2xl font-bold font-serif text-center mb-4 text-yellow-400">Truco Venezolano</h2>
+                        <ul className="space-y-2 text-sm md:text-base">
                             <li><strong>Flor:</strong> Mata envido. Si tienes 3 del palo (o piezas).</li>
                             <li><strong>Perico (11 Vira):</strong> Pieza más alta.</li>
                             <li><strong>Perica (10 Vira):</strong> Segunda Pieza.</li>
@@ -840,7 +791,7 @@ const App: React.FC = () => {
                 </div>
             )}
             
-            <div className="absolute inset-4 rounded-3xl felt-texture border-[16px] border-[#5d4037] shadow-[inset_0_0_100px_rgba(0,0,0,0.6)] flex flex-col z-0">
+            <div className="absolute inset-2 md:inset-4 rounded-3xl felt-texture border-[8px] md:border-[16px] border-[#5d4037] shadow-[inset_0_0_100px_rgba(0,0,0,0.6)] flex flex-col z-0">
                 <Table 
                     player={player} 
                     cpu={cpu} 
@@ -854,21 +805,21 @@ const App: React.FC = () => {
 
             <ScoreBoard playerScore={player.points} cpuScore={cpu.points} />
 
-            <div className="absolute bottom-10 left-0 right-0 flex justify-center z-20 pointer-events-none">
-                <div className="pointer-events-auto max-w-4xl px-4 w-full flex justify-center">
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center z-20 pointer-events-none">
+                <div className="pointer-events-auto max-w-4xl px-2 md:px-4 w-full flex justify-center">
                     {renderActionControls()}
                 </div>
             </div>
 
             {lastActionMessage && (
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-in zoom-in fade-in duration-300 pointer-events-none w-full flex justify-center">
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-in zoom-in fade-in duration-300 pointer-events-none w-full flex justify-center px-4">
                     <div className={`
-                        px-8 py-4 rounded-xl text-2xl font-serif font-bold border shadow-xl text-center
+                        px-4 py-2 md:px-8 md:py-4 rounded-xl text-lg md:text-2xl font-serif font-bold border shadow-xl text-center
                         ${phase === GamePhase.GameOver 
                             ? (player.points >= WIN_SCORE ? 'bg-yellow-600 text-white border-white scale-125' : 'bg-red-800 text-white border-red-500') 
                             : 'bg-black/80 text-white border-yellow-500'}
                     `}>
-                        {phase === GamePhase.GameOver && player.points >= WIN_SCORE && <Trophy className="inline-block mr-2 text-yellow-200 mb-1" size={32} />}
+                        {phase === GamePhase.GameOver && player.points >= WIN_SCORE && <Trophy className="inline-block mr-2 text-yellow-200 mb-1" size={24} />}
                         {lastActionMessage}
                     </div>
                 </div>
@@ -876,14 +827,22 @@ const App: React.FC = () => {
             
             <style>{`
                 .btn-action {
-                    padding: 0.5rem 1rem;
-                    border-radius: 0.5rem;
+                    padding: 0.4rem 0.6rem;
+                    border-radius: 0.3rem;
                     color: white;
                     font-weight: bold;
-                    font-size: 0.85rem;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                    font-size: 0.65rem;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                     transition: all 0.2s;
                     text-transform: uppercase;
+                }
+                @media (min-width: 768px) {
+                    .btn-action {
+                        padding: 0.5rem 1rem;
+                        border-radius: 0.5rem;
+                        font-size: 0.85rem;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                    }
                 }
                 .btn-action:hover { filter: brightness(1.1); transform: translateY(-2px); }
                 .btn-action:active { transform: translateY(0); }
