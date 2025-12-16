@@ -835,6 +835,7 @@ const App: React.FC = () => {
                     onCardClick={handleCardClick}
                     selectedCardId={selectedCardId}
                     vira={vira}
+                    roundWinners={roundWinners}
                 />
             </div>
 

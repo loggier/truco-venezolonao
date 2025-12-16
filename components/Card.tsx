@@ -9,7 +9,7 @@ interface CardProps {
     onClick?: () => void;
     playable?: boolean;
     isSelected?: boolean;
-    hidden?: boolean; // Fully hidden (opponent hand)
+    hidden?: boolean; // Fully hidden (opponent hand or face down)
     small?: boolean;
     className?: string;
 }
@@ -37,7 +37,7 @@ const SuitIcon: React.FC<{ suit: Suit, className?: string }> = ({ suit, classNam
             </svg>
         );
         case Suit.Oros: return (
-            <div className={`rounded-full border-4 border-yellow-500 bg-yellow-200 flex items-center justify-center ${commonClass}`}>
+            <div className={`rounded-full border-4 border-yellow-500 bg-yellow-200 flex items-center justify-center ${commonClass} shadow-inner`}>
                 <div className="w-1/2 h-1/2 bg-yellow-600 rounded-full opacity-50"></div>
             </div>
         );
@@ -50,81 +50,109 @@ export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playab
     
     // Responsive Dimensions
     const sizeClasses = small 
-        ? 'w-9 h-14 md:w-12 md:h-20 text-[9px] md:text-xs' 
-        : 'w-11 h-20 md:w-24 md:h-36 text-sm md:text-lg';
+        ? 'w-10 h-16 md:w-14 md:h-22 text-[9px] md:text-xs' 
+        : 'w-16 h-24 md:w-28 md:h-44 text-sm md:text-xl'; // Slightly larger for better 3D effect
 
-    // Renders the card back pattern
-    const CardBack = () => (
-        <div 
-            className={`
-                relative rounded-lg shadow-md border-2 border-white bg-blue-900 
-                ${sizeClasses}
-                bg-opacity-90 flex items-center justify-center
-                bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]
-                ${className}
-            `}
-        >
-            <div className="w-full h-full border-2 border-blue-400 rounded-md opacity-20"></div>
-        </div>
-    );
+    // The logic: We always render both Front and Back. We rotate the container based on 'hidden'.
+    // If card.isCovered is true, we treat it as hidden visually if it's on the table.
+    const showBack = hidden;
 
-    if (hidden) return <CardBack />;
+    // Played as "Carta Nula" / Covered - we add a sticker to the back
+    const isNula = card.isCovered && !hidden; // If it's covered but not 'hidden' (e.g. played on table), it's already flipped down? No, covered means played face down.
 
-    // Played as "Carta Nula" / Covered
-    if (card.isCovered) {
-         return (
-             <div className="relative group">
-                 <CardBack />
-                 <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
-                    <span className="text-white text-[10px] md:text-xs font-bold uppercase opacity-80 rotate-45 border-2 border-white px-1">Nula</span>
-                 </div>
-             </div>
-         );
-    }
+    // Adjust: If card.isCovered (played as null), it should appear face down (Back showing).
+    // So visualHidden is true if hidden OR isCovered.
+    const visualHidden = hidden || card.isCovered;
 
     return (
         <div 
+            className={`perspective-1000 select-none ${className}`}
             onDoubleClick={playable ? onDoubleClick : undefined}
             onClick={playable ? onClick : undefined}
-            title={playable ? "Click para seleccionar, otro click para jugar" : ""}
-            className={`
-                relative bg-white rounded-lg shadow-lg select-none overflow-hidden transition-all duration-300
-                ${sizeClasses}
-                ${playable ? 'cursor-pointer hover:-translate-y-2 md:hover:-translate-y-4 hover:shadow-2xl' : ''}
-                ${isSelected ? '-translate-y-4 md:-translate-y-6 ring-2 md:ring-4 ring-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] z-10' : 'border border-gray-300'}
-                flex flex-col items-center justify-between p-0.5 md:p-1
-                ${className}
-            `}
+            title={playable ? "Click para seleccionar, doble click para jugar" : ""}
         >
-            {/* Top Left Number */}
-            <div className="w-full flex justify-start pl-0.5 md:pl-1 font-bold font-serif text-gray-800 leading-none mt-0.5 md:mt-1">
-                {card.value}
-            </div>
-
-            {/* Center Art - Responsive Icon Size */}
-            <div className="flex-1 flex flex-col items-center justify-center space-y-0.5 md:space-y-1 w-full pointer-events-none overflow-hidden p-0.5 md:p-1">
-                <div className={`${small ? 'w-3 h-3' : 'w-6 h-6 md:w-10 md:h-10'}`}>
-                    <SuitIcon suit={card.suit} />
-                </div>
+            <div className={`
+                relative transition-transform duration-700 transform-style-3d 
+                ${sizeClasses}
+                ${visualHidden ? 'rotate-y-180' : ''} 
+                ${isSelected ? '-translate-y-4 md:-translate-y-6 rotate-x-12 z-20' : ''}
+                ${playable && !isSelected ? 'hover:-translate-y-2 hover:rotate-x-6 cursor-pointer' : ''}
+            `}>
                 
-                {/* Decorative lines */}
-                <div className={`w-full h-px ${card.suit === Suit.Oros ? 'bg-yellow-500' : card.suit === Suit.Copas ? 'bg-red-300' : card.suit === Suit.Espadas ? 'bg-blue-300' : 'bg-green-300' } opacity-50`}></div>
+                {/* --- FRONT FACE --- */}
+                <div className={`
+                    absolute inset-0 backface-hidden bg-white rounded-xl overflow-hidden
+                    border border-gray-200
+                    flex flex-col items-center justify-between p-1 md:p-2
+                    shadow-[1px_1px_5px_rgba(0,0,0,0.3)]
+                    ${isSelected ? 'ring-4 ring-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)]' : ''}
+                `}>
+                    {/* Gloss / Sheen */}
+                    <div className="absolute inset-0 gloss-sheen pointer-events-none z-10"></div>
+
+                    {/* Top Left Number */}
+                    <div className="w-full flex justify-start pl-1 font-bold font-serif text-gray-800 leading-none">
+                        {card.value}
+                    </div>
+
+                    {/* Center Art */}
+                    <div className="flex-1 flex flex-col items-center justify-center w-full pointer-events-none p-1">
+                        <div className={`${small ? 'w-4 h-4' : 'w-8 h-8 md:w-12 md:h-12'} drop-shadow-md`}>
+                            <SuitIcon suit={card.suit} />
+                        </div>
+                        {/* Decorative line */}
+                        <div className={`mt-1 md:mt-2 w-3/4 h-0.5 rounded-full ${
+                            card.suit === Suit.Oros ? 'bg-yellow-400' : 
+                            card.suit === Suit.Copas ? 'bg-red-300' : 
+                            card.suit === Suit.Espadas ? 'bg-blue-300' : 'bg-green-300' 
+                        } opacity-60 shadow-sm`}></div>
+                    </div>
+
+                    {/* Bottom Right Number (Inverted) */}
+                    <div className="w-full flex justify-end pr-1 font-bold font-serif text-gray-800 transform rotate-180 leading-none">
+                        {card.value}
+                    </div>
+
+                    {/* Border Box (Marco) */}
+                    <div className="absolute inset-1.5 border border-gray-300 rounded opacity-40 pointer-events-none"></div>
+
+                    {/* Detail: La Pinta (The gaps in the border line) */}
+                    {card.suit === Suit.Oros && <div className="absolute inset-x-0 top-0.5 h-1 bg-white z-0" style={{left:'30%', right:'30%'}}></div>}
+                    {card.suit === Suit.Copas && <div className="absolute inset-x-0 top-0.5 h-1 flex justify-between px-2.5 bg-transparent z-0"><div className="w-2 h-full bg-white"></div></div>}
+                    {card.suit === Suit.Espadas && <div className="absolute inset-x-0 top-0.5 h-1 flex justify-between px-2.5 bg-transparent z-0"><div className="w-2 h-full bg-white"></div><div className="w-2 h-full bg-white"></div></div>}
+                    {card.suit === Suit.Bastos && <div className="absolute inset-x-0 top-0.5 h-1 flex justify-between px-2.5 bg-transparent z-0"><div className="w-2 h-full bg-white"></div><div className="w-2 h-full bg-white"></div><div className="w-2 h-full bg-white"></div></div>}
+                </div>
+
+                {/* --- BACK FACE --- */}
+                <div className={`
+                    absolute inset-0 backface-hidden rotate-y-180 rounded-xl overflow-hidden
+                    border-2 border-gray-100
+                    bg-blue-900 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]
+                    flex items-center justify-center
+                    shadow-[1px_1px_5px_rgba(0,0,0,0.3)]
+                `}>
+                    {/* Gloss / Sheen */}
+                    <div className="absolute inset-0 gloss-sheen pointer-events-none z-10"></div>
+                    
+                    {/* Inner Pattern Box */}
+                    <div className="w-[85%] h-[90%] border-2 border-blue-400/50 rounded-lg opacity-40"></div>
+                    
+                    {/* Central Design */}
+                    <div className="absolute w-6 h-6 md:w-10 md:h-10 bg-blue-800 rounded-full flex items-center justify-center shadow-inner opacity-80 border border-blue-600">
+                        <div className="w-1/2 h-1/2 bg-blue-400 rotate-45"></div>
+                    </div>
+
+                    {/* "NULA" Sticker if played covered */}
+                    {card.isCovered && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-20">
+                            <span className="text-white text-[10px] md:text-sm font-bold uppercase tracking-widest -rotate-45 border-2 border-white px-2 py-1 rounded bg-black/40 backdrop-blur-sm shadow-lg">
+                                Nula
+                            </span>
+                        </div>
+                    )}
+                </div>
+
             </div>
-
-            {/* Bottom Right Number (Inverted) */}
-            <div className="w-full flex justify-end pr-0.5 md:pr-1 font-bold font-serif text-gray-800 transform rotate-180 leading-none mb-0.5 md:mb-1">
-                {card.value}
-            </div>
-
-            {/* Border Box (Marco) */}
-            <div className="absolute inset-1 border border-gray-400 rounded opacity-30 pointer-events-none"></div>
-            
-            {/* La Pinta */}
-            {card.suit === Suit.Oros && <div className="absolute inset-x-0 top-0 h-0.5 md:h-1 bg-white" style={{left:'30%', right:'30%'}}></div>}
-            {card.suit === Suit.Copas && <div className="absolute inset-x-0 top-0 h-0.5 md:h-1 flex justify-between px-2"><div className="w-2 h-full bg-white"></div></div>}
-            {card.suit === Suit.Espadas && <div className="absolute inset-x-0 top-0 h-0.5 md:h-1 flex justify-between px-2"><div className="w-2 h-full bg-white"></div><div className="w-2 h-full bg-white"></div></div>}
-            {card.suit === Suit.Bastos && <div className="absolute inset-x-0 top-0 h-0.5 md:h-1 flex justify-between px-2"><div className="w-2 h-full bg-white"></div><div className="w-2 h-full bg-white"></div><div className="w-2 h-full bg-white"></div></div>}
-
         </div>
     );
 };

@@ -12,16 +12,17 @@ interface TableProps {
     selectedCardId: number | null;
     phase: GamePhase;
     vira: CardData | null;
+    roundWinners: ( 'player' | 'cpu' | 'draw' | null )[];
 }
 
-export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardClick, selectedCardId, phase, vira }) => {
+export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardClick, selectedCardId, phase, vira, roundWinners }) => {
 
     const getStatusInfo = () => {
         switch(phase) {
             case GamePhase.PlayerTurn: 
-                return { text: "TU TURNO", color: "bg-green-600 border-green-400 text-white shadow-green-500/50" };
+                return { text: "TU TURNO", color: "bg-green-600 border-green-400 text-white shadow-[0_0_20px_rgba(34,197,94,0.6)]" };
             case GamePhase.CpuTurn: 
-                return { text: "TURNO RIVAL", color: "bg-red-800 border-red-600 text-red-100 shadow-red-500/50" };
+                return { text: "TURNO RIVAL", color: "bg-red-800 border-red-600 text-red-100 shadow-[0_0_20px_rgba(220,38,38,0.6)]" };
             case GamePhase.WaitingForResponse: 
                 return { text: "ESPERANDO...", color: "bg-yellow-600 border-yellow-400 text-yellow-100" };
             case GamePhase.RoundResolution: 
@@ -37,100 +38,193 @@ export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardCli
 
     const status = getStatusInfo();
 
-    return (
-        <div className="relative w-full h-full flex md:flex-col items-center justify-between py-2 md:py-4 overflow-hidden">
-            
-            {/* CPU Label - Top Center */}
-            <div className={`absolute top-0 left-1/2 -translate-x-1/2 mt-1 md:mt-2 z-20 flex items-center space-x-2 md:space-x-3 px-3 py-1 md:px-4 md:py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 ${phase === GamePhase.CpuTurn ? 'bg-red-900/90 ring-2 ring-red-500 shadow-[0_0_20px_rgba(239,68,68,0.6)] scale-105' : 'bg-black/40 shadow-lg'}`}>
-                <div className="relative">
-                    <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-red-500 to-red-800 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner text-xs md:text-sm">
-                        CPU
-                    </div>
-                    {phase === GamePhase.CpuTurn && (
-                        <span className="absolute -top-1 -right-1 flex h-2 w-2 md:h-3 md:w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-full w-full bg-yellow-500"></span>
-                        </span>
-                    )}
-                </div>
-                <div className="flex flex-col leading-none">
-                    <span className="text-white font-medium text-xs md:text-sm drop-shadow-md tracking-wide">{cpu.name}</span>
-                    {cpu.isHand && <span className="text-yellow-400 text-[8px] md:text-[10px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
-                </div>
-            </div>
+    // Fake Deck generator for visual stack
+    const renderDeckStack = () => (
+        <div className="relative w-12 h-20 md:w-16 md:h-24">
+            {[...Array(3)].map((_, i) => (
+                <div key={i} className="absolute inset-0 bg-blue-900 border border-gray-400 rounded-lg shadow-sm" 
+                     style={{ transform: `translate(-${i*2}px, -${i*2}px)`, zIndex: i }}></div>
+            ))}
+             <div className="absolute inset-0 bg-blue-900 rounded-lg border-2 border-gray-200 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')] shadow-md" style={{ transform: 'translate(-6px, -6px)', zIndex: 10 }}></div>
+        </div>
+    );
 
-            {/* CPU Cards Area 
-                Mobile: Absolute Top Left, Scaled Down
-                Desktop: Relative Top Center, Normal Size
-            */}
+    // Render a single played card with position based on state
+    const renderPlayedCard = (card: CardData | null, index: number, isCpu: boolean) => {
+        if (!card) return null;
+
+        // Check if this card belongs to a completed round (History)
+        const isHistory = roundWinners[index] !== null;
+
+        let style: React.CSSProperties = {};
+
+        if (isHistory) {
+            // HISTORY POSITION (Moved to LEFT side near deck to avoid hands on right)
+            style = {
+                top: '55%',
+                left: '12%', // Near the deck/vira
+                marginTop: isCpu ? `-${25 + index * 3}px` : `${25 + index * 3}px`,
+                transform: `
+                    translateY(-50%)
+                    rotate(${isCpu ? Math.random() * 15 - 5 : Math.random() * 15 - 10}deg) 
+                    scale(0.55)
+                `,
+                zIndex: index // Lower z-index for older cards
+            };
+        } else {
+            // ACTIVE POSITION (Center Stage - The Ring)
+            // Stays strictly in the middle
+            style = {
+                top: '50%',
+                left: '50%',
+                transform: `
+                    translate(-50%, -50%) 
+                    translateY(${isCpu ? '-65px' : '65px'}) 
+                    rotate(${Math.random() * 4 - 2}deg) 
+                    scale(1)
+                `,
+                zIndex: 50 + index // Higher z-index for active cards
+            };
+            
+            // Mobile adjustments for active cards to ensure they are visible above/below center
+            if (window.innerWidth < 768) {
+                 style.transform = `
+                    translate(-50%, -50%) 
+                    translateY(${isCpu ? '-45px' : '45px'}) 
+                    rotate(${Math.random() * 4 - 2}deg) 
+                    scale(0.9)
+                `;
+            }
+        }
+
+        return (
+            <div key={`${isCpu ? 'c' : 'p'}-${index}`} 
+                 className="absolute transition-all duration-700 ease-in-out shadow-xl"
+                 style={style}>
+                <Card card={card} hidden={card.isCovered} />
+            </div>
+        );
+    };
+
+    return (
+        <div className="relative w-full h-full overflow-hidden perspective-1000">
+            
+            {/* --- CPU SECTION --- */}
+            
+            {/* CPU Hand Area - Absolute Top Positioning */}
             <div className={`
-                absolute top-12 -left-4 scale-[0.85] origin-top-left
-                md:relative md:top-auto md:left-auto md:mt-14 md:scale-100 md:origin-center
-                flex flex-col items-center space-y-2 transition-all duration-500 z-10
-                ${phase === GamePhase.PlayerTurn ? 'opacity-60 md:scale-95' : 'opacity-100'}
+                absolute z-30 transition-all duration-500 flex flex-col items-center
+                /* Mobile: Top Right Corner */
+                top-[-10px] right-[-15px] origin-top-right scale-[0.65]
+                /* Desktop: Top Center */
+                md:top-[-10px] md:right-auto md:left-1/2 md:-translate-x-1/2 md:origin-top md:scale-90
+                
+                ${phase === GamePhase.PlayerTurn ? 'opacity-70 blur-[0.5px]' : 'opacity-100'}
             `}>
-                <div className="flex space-x-[-1rem]">
+                {/* CPU Label - Mobile Only (Above Hand) */}
+                <div className={`
+                    flex md:hidden items-center space-x-2 px-2 py-0.5 mb-1 rounded-full backdrop-blur-md border border-white/10 
+                    ${phase === GamePhase.CpuTurn ? 'bg-red-900/80 ring-1 ring-red-500' : 'bg-black/30'}
+                `}>
+                     <div className="w-4 h-4 rounded-full bg-red-700 flex items-center justify-center text-white font-bold text-[8px]">CPU</div>
+                     <span className="text-white text-[9px] font-bold">{cpu.name}</span>
+                </div>
+
+                <div className="flex justify-center -space-x-8 md:-space-x-12">
                     {cpu.hand.map((card, idx) => (
-                        <div key={card.id} style={{ transform: `rotate(${(idx - 1) * 5}deg)` }}>
+                        <div key={card.id} 
+                             className="transform transition-transform duration-500"
+                             style={{ 
+                                 // Fan layout
+                                 transform: `translateY(${idx % 2 === 0 ? '5px' : '0'}) rotate(${(idx - 1) * 8}deg)`,
+                                 zIndex: idx 
+                             }}>
                             <Card card={card} hidden={phase !== GamePhase.GameOver} /> 
                         </div>
                     ))}
                 </div>
             </div>
+            
+            {/* Desktop CPU Label (Separate from hand to position nicely) */}
+            <div className={`hidden md:flex absolute top-4 left-1/2 -translate-x-1/2 z-20 items-center space-x-3 px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 ${phase === GamePhase.CpuTurn ? 'bg-red-900/90 ring-2 ring-red-500 scale-105' : 'bg-black/40'}`}>
+                <div className="relative">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-red-800 flex items-center justify-center text-white font-bold border-2 border-white/20 text-xs">CPU</div>
+                </div>
+                <div className="flex flex-col leading-none">
+                    <span className="text-white font-medium text-xs drop-shadow-md tracking-wide">{cpu.name}</span>
+                    {cpu.isHand && <span className="text-yellow-400 text-[9px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
+                </div>
+            </div>
 
-            {/* Center Play Area */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+
+            {/* --- CENTER PLAY AREA --- */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none perspective-1000">
                  
-                 {/* LA VIRA (La Muestra) - Left Middle */}
-                 {vira && (
-                    <div className="absolute left-1 top-1/2 transform -translate-y-1/2 flex flex-col items-center opacity-90 animate-in fade-in zoom-in duration-700 z-0 pointer-events-none">
-                        <div className="text-yellow-200 font-bold text-[8px] md:text-[10px] lg:text-xs mb-1 tracking-widest uppercase text-shadow">La Vira</div>
-                        <div className="transform rotate-90 shadow-2xl border-2 border-yellow-500/50 rounded-lg">
-                            <Card card={vira} small className="scale-90 md:scale-110 lg:scale-125 origin-center" />
-                        </div>
+                 {/* DECK & VIRA (Left Side) */}
+                 <div className="absolute left-2 md:left-8 top-1/2 transform -translate-y-1/2 flex flex-col items-center z-0 pointer-events-auto">
+                    <div className="relative group scale-75 md:scale-100">
+                         {/* Vira tucking under the deck */}
+                         {vira && (
+                            <div className="absolute top-1/2 left-1/2 transform -translate-y-1/2 -translate-x-1/2 rotate-90 ml-8 md:ml-10 transition-transform duration-700 hover:ml-12 hover:rotate-[100deg]">
+                                <Card card={vira} small className="shadow-2xl" />
+                            </div>
+                         )}
+                         {/* The Deck Stack */}
+                         <div className="relative z-10 shadow-2xl">
+                             {renderDeckStack()}
+                         </div>
                     </div>
-                 )}
+                 </div>
 
-                 {/* Status Indicator - Right Middle */}
-                 <div className="absolute right-1 top-1/2 transform -translate-y-1/2 z-20 flex flex-col items-end">
+                 {/* PLAYED CARDS CONTAINER */}
+                 <div className="absolute inset-0 z-10 transform-style-3d">
+                     {[0, 1, 2].map(rIdx => (
+                         <React.Fragment key={rIdx}>
+                             {renderPlayedCard(cpu.playedCards[rIdx] || null, rIdx, true)}
+                             {renderPlayedCard(player.playedCards[rIdx] || null, rIdx, false)}
+                         </React.Fragment>
+                     ))}
+                 </div>
+
+                 {/* Status Indicator */}
+                 <div className="absolute right-auto left-1/2 md:right-32 md:left-auto top-1/2 transform -translate-x-1/2 -translate-y-1/2 md:translate-x-0 z-20 flex flex-col items-center pointer-events-none">
+                     {/* Spacer to avoid direct center overlap */}
+                     <div className="h-24 w-1"></div>
                     {status.text && (
-                        <div className={`flex items-center px-3 py-2 md:px-4 md:py-3 rounded-xl font-bold tracking-widest shadow-2xl border-2 backdrop-blur-md transition-all duration-300 animate-in slide-in-from-right-10 ${status.color} max-w-[100px] md:max-w-[140px] lg:max-w-none text-center text-[10px] md:text-xs lg:text-sm`}>
-                            {phase === GamePhase.CpuTurn && <Loader2 className="animate-spin mr-1 md:mr-2 shrink-0" size={14} />}
+                        <div className={`flex items-center px-3 py-1.5 rounded-xl font-bold tracking-widest shadow-2xl border-2 backdrop-blur-md transition-all duration-300 animate-in zoom-in fade-in ${status.color} text-[9px] md:text-sm whitespace-nowrap`}>
+                            {phase === GamePhase.CpuTurn && <Loader2 className="animate-spin mr-2 shrink-0" size={14} />}
                             {status.text}
                         </div>
                     )}
                  </div>
-
-                 {/* Played Cards Drop Zone - CENTER */}
-                 <div className="relative w-48 h-48 md:w-64 md:h-64 flex items-center justify-center z-10">
-                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-16 md:-translate-y-24 flex space-x-2 md:space-x-4">
-                        {cpu.playedCards.map((card, i) => (
-                            card ? <div key={`cpu-played-${i}`} className="animate-in fade-in zoom-in duration-300 shadow-xl transform rotate-3"><Card card={card} /></div> : null
-                        ))}
-                     </div>
-                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 translate-y-4 md:translate-y-4 flex space-x-2 md:space-x-4">
-                        {player.playedCards.map((card, i) => (
-                            card ? <div key={`pl-played-${i}`} className="animate-in fade-in zoom-in duration-300 shadow-xl transform -rotate-3"><Card card={card} /></div> : null
-                        ))}
-                     </div>
-                 </div>
             </div>
 
-            {/* Player Area 
-                Mobile: Absolute Bottom Right, Scaled Down
-                Desktop: Relative Bottom Center, Normal Size
-            */}
+
+            {/* --- PLAYER SECTION --- */}
+
+            {/* Player Hand Area - Absolute Bottom Positioning */}
             <div className={`
-                absolute bottom-20 -right-2 scale-[0.85] origin-bottom-right
-                md:relative md:bottom-auto md:right-auto md:mb-4 md:scale-100 md:origin-center
-                flex flex-col items-center space-y-2 md:space-y-4 transition-all duration-500 z-30
-                ${phase === GamePhase.CpuTurn ? 'opacity-80 md:scale-95' : 'opacity-100'}
+                absolute z-30 transition-all duration-500 flex flex-col items-center
+                /* Mobile: Bottom Right Corner */
+                bottom-[-10px] right-[-15px] origin-bottom-right scale-[0.70]
+                /* Desktop: Bottom Center (Very low to avoid covering center) */
+                md:bottom-[-20px] md:right-auto md:left-1/2 md:-translate-x-1/2 md:origin-bottom md:scale-90
+                
+                ${phase === GamePhase.CpuTurn ? 'opacity-80 grayscale-[0.3]' : 'opacity-100'}
             `}>
-                 <div className="flex space-x-2 md:space-x-4 pr-4 md:pr-0">
+                
+                 <div className="flex justify-center -space-x-4 md:-space-x-6 pb-2 perspective-1000">
                     {player.hand.map((card, idx) => (
                         <div key={card.id} 
-                             className={`transform transition-transform duration-300 ${selectedCardId === card.id ? '' : 'hover:-translate-y-2 md:hover:-translate-y-4'} ${player.playedCards.length === cpu.playedCards.length || (player.isHand && player.playedCards.length === cpu.playedCards.length) ? '' : ''}`}
-                             style={{ transform: `translateY(${idx%2===0 ? '0px' : '4px'}) rotate(${(idx - 1) * 3}deg)` }}
+                             className={`transform transition-all duration-300 ease-out hover:z-50 hover:scale-110 
+                                ${selectedCardId === card.id ? 'z-40 -translate-y-4 md:-translate-y-6' : 'z-auto'}
+                             `}
+                             style={{ 
+                                 transformOrigin: 'bottom center',
+                                 // Simple fan
+                                 transform: `rotate(${(idx - 1) * 6}deg) translateY(${idx%2===1 ? '-3px' : '0'})`,
+                                 zIndex: idx + 10
+                             }}
                         >
                             <Card 
                                 card={card} 
@@ -143,24 +237,25 @@ export const Table: React.FC<TableProps> = ({ player, cpu, onPlayCard, onCardCli
                     ))}
                 </div>
                 
-                {/* Player Label */}
-                <div className={`flex items-center space-x-2 md:space-x-3 px-3 py-1 md:px-4 md:py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 mr-8 md:mr-0 ${phase === GamePhase.PlayerTurn ? 'bg-green-900/80 ring-2 ring-green-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-black/30'}`}>
-                   <div className="relative">
-                       <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-inner text-xs md:text-sm">
-                            YO
-                       </div>
-                        {phase === GamePhase.PlayerTurn && (
-                            <span className="absolute -top-1 -right-1 flex h-2 w-2 md:h-3 md:w-3">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-full w-full bg-green-500"></span>
-                            </span>
-                       )}
-                   </div>
-                   <div className="flex flex-col leading-none">
-                       <span className="text-white font-medium text-xs md:text-sm drop-shadow-md">{player.name}</span>
-                       {player.isHand && <span className="text-yellow-400 text-[8px] md:text-[10px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
-                   </div>
+                {/* Player Label - Mobile Only (Below Hand) */}
+                 <div className={`
+                    flex md:hidden items-center space-x-2 px-2 py-0.5 mt-1 mr-6 rounded-full backdrop-blur-md border border-white/10 
+                    ${phase === GamePhase.PlayerTurn ? 'bg-green-900/80 ring-1 ring-green-500' : 'bg-black/30'}
+                `}>
+                     <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[8px]">YO</div>
+                     <span className="text-white text-[9px] font-bold">{player.name}</span>
                 </div>
+            </div>
+            
+            {/* Desktop Player Label (Separate from hand, sits just above action bar) */}
+            <div className={`hidden md:flex absolute bottom-24 left-1/2 -translate-x-1/2 z-20 items-center space-x-3 px-5 py-1.5 rounded-full backdrop-blur-md transition-all duration-300 ${phase === GamePhase.PlayerTurn ? 'bg-green-900/90 ring-2 ring-green-500 scale-105' : 'bg-black/50 border border-white/10'}`}>
+               <div className="relative">
+                   <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-white/20 text-xs">YO</div>
+               </div>
+               <div className="flex flex-col leading-none">
+                   <span className="text-white font-medium text-sm drop-shadow-md tracking-wide">{player.name}</span>
+                   {player.isHand && <span className="text-yellow-400 text-[9px] font-bold uppercase tracking-wider mt-0.5">Es Mano</span>}
+               </div>
             </div>
             
         </div>
