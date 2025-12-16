@@ -49,16 +49,18 @@ const SuitIcon: React.FC<{ suit: Suit, className?: string }> = ({ suit, classNam
 export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playable = false, isSelected = false, hidden = false, small = false, className = '' }) => {
     
     // Responsive Dimensions
+    // Small: Played cards on table. 
+    // Normal: Hand cards. Reduced mobile width (w-14) to fit better and be less obstructive.
     const sizeClasses = small 
-        ? 'w-10 h-16 md:w-14 md:h-22 text-[9px] md:text-xs' 
-        : 'w-16 h-24 md:w-28 md:h-44 text-sm md:text-xl'; // Slightly larger for better 3D effect
+        ? 'w-11 h-16 md:w-24 md:h-36 text-[10px] md:text-lg' 
+        : 'w-16 h-24 md:w-32 md:h-48 text-sm md:text-2xl';
 
     // The logic: We always render both Front and Back. We rotate the container based on 'hidden'.
     // If card.isCovered is true, we treat it as hidden visually if it's on the table.
     const showBack = hidden;
 
     // Played as "Carta Nula" / Covered - we add a sticker to the back
-    const isNula = card.isCovered && !hidden; // If it's covered but not 'hidden' (e.g. played on table), it's already flipped down? No, covered means played face down.
+    const isNula = card.isCovered && !hidden; 
 
     // Adjust: If card.isCovered (played as null), it should appear face down (Back showing).
     // So visualHidden is true if hidden OR isCovered.
@@ -75,29 +77,29 @@ export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playab
                 relative transition-transform duration-700 transform-style-3d 
                 ${sizeClasses}
                 ${visualHidden ? 'rotate-y-180' : ''} 
-                ${isSelected ? '-translate-y-4 md:-translate-y-6 rotate-x-12 z-20' : ''}
-                ${playable && !isSelected ? 'hover:-translate-y-2 hover:rotate-x-6 cursor-pointer' : ''}
+                ${isSelected ? '-translate-y-6 rotate-x-12 z-20' : ''}
+                ${playable && !isSelected ? 'hover:-translate-y-3 hover:rotate-x-6 cursor-pointer' : ''}
             `}>
                 
                 {/* --- FRONT FACE --- */}
                 <div className={`
-                    absolute inset-0 backface-hidden bg-white rounded-xl overflow-hidden
+                    absolute inset-0 backface-hidden bg-white rounded-lg md:rounded-xl overflow-hidden
                     border border-gray-200
                     flex flex-col items-center justify-between p-1 md:p-2
-                    shadow-[1px_1px_5px_rgba(0,0,0,0.3)]
-                    ${isSelected ? 'ring-4 ring-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)]' : ''}
+                    shadow-[1px_1px_4px_rgba(0,0,0,0.3)]
+                    ${isSelected ? 'ring-2 md:ring-4 ring-yellow-400 shadow-[0_0_25px_rgba(250,204,21,0.6)]' : ''}
                 `}>
                     {/* Gloss / Sheen */}
                     <div className="absolute inset-0 gloss-sheen pointer-events-none z-10"></div>
 
                     {/* Top Left Number */}
-                    <div className="w-full flex justify-start pl-1 font-bold font-serif text-gray-800 leading-none">
+                    <div className="w-full flex justify-start pl-0.5 md:pl-1 font-bold font-serif text-gray-800 leading-none">
                         {card.value}
                     </div>
 
                     {/* Center Art */}
-                    <div className="flex-1 flex flex-col items-center justify-center w-full pointer-events-none p-1">
-                        <div className={`${small ? 'w-4 h-4' : 'w-8 h-8 md:w-12 md:h-12'} drop-shadow-md`}>
+                    <div className="flex-1 flex flex-col items-center justify-center w-full pointer-events-none p-0.5">
+                        <div className={`${small ? 'w-5 h-5 md:w-10 md:h-10' : 'w-6 h-6 md:w-14 md:h-14'} drop-shadow-md`}>
                             <SuitIcon suit={card.suit} />
                         </div>
                         {/* Decorative line */}
@@ -109,12 +111,12 @@ export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playab
                     </div>
 
                     {/* Bottom Right Number (Inverted) */}
-                    <div className="w-full flex justify-end pr-1 font-bold font-serif text-gray-800 transform rotate-180 leading-none">
+                    <div className="w-full flex justify-end pr-0.5 md:pr-1 font-bold font-serif text-gray-800 transform rotate-180 leading-none">
                         {card.value}
                     </div>
 
                     {/* Border Box (Marco) */}
-                    <div className="absolute inset-1.5 border border-gray-300 rounded opacity-40 pointer-events-none"></div>
+                    <div className="absolute inset-1 md:inset-1.5 border border-gray-300 rounded opacity-40 pointer-events-none"></div>
 
                     {/* Detail: La Pinta (The gaps in the border line) */}
                     {card.suit === Suit.Oros && <div className="absolute inset-x-0 top-0.5 h-1 bg-white z-0" style={{left:'30%', right:'30%'}}></div>}
@@ -125,11 +127,11 @@ export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playab
 
                 {/* --- BACK FACE --- */}
                 <div className={`
-                    absolute inset-0 backface-hidden rotate-y-180 rounded-xl overflow-hidden
+                    absolute inset-0 backface-hidden rotate-y-180 rounded-lg md:rounded-xl overflow-hidden
                     border-2 border-gray-100
                     bg-blue-900 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]
                     flex items-center justify-center
-                    shadow-[1px_1px_5px_rgba(0,0,0,0.3)]
+                    shadow-[1px_1px_4px_rgba(0,0,0,0.3)]
                 `}>
                     {/* Gloss / Sheen */}
                     <div className="absolute inset-0 gloss-sheen pointer-events-none z-10"></div>
@@ -138,14 +140,14 @@ export const Card: React.FC<CardProps> = ({ card, onDoubleClick, onClick, playab
                     <div className="w-[85%] h-[90%] border-2 border-blue-400/50 rounded-lg opacity-40"></div>
                     
                     {/* Central Design */}
-                    <div className="absolute w-6 h-6 md:w-10 md:h-10 bg-blue-800 rounded-full flex items-center justify-center shadow-inner opacity-80 border border-blue-600">
+                    <div className="absolute w-5 h-5 md:w-10 md:h-10 bg-blue-800 rounded-full flex items-center justify-center shadow-inner opacity-80 border border-blue-600">
                         <div className="w-1/2 h-1/2 bg-blue-400 rotate-45"></div>
                     </div>
 
                     {/* "NULA" Sticker if played covered */}
                     {card.isCovered && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-20">
-                            <span className="text-white text-[10px] md:text-sm font-bold uppercase tracking-widest -rotate-45 border-2 border-white px-2 py-1 rounded bg-black/40 backdrop-blur-sm shadow-lg">
+                            <span className="text-white text-[9px] md:text-sm font-bold uppercase tracking-widest -rotate-45 border-2 border-white px-2 py-1 rounded bg-black/40 backdrop-blur-sm shadow-lg">
                                 Nula
                             </span>
                         </div>

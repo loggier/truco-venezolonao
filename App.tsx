@@ -6,7 +6,7 @@ import { createDeck, WIN_SCORE } from './constants';
 import { determineWinner, calculateEnvidoPoints, calculateFlorPoints, checkHasFlor, shuffleDeck, calculateVenecoPower } from './services/trucoLogic';
 import { speak, playCardSound, playShuffleSound } from './services/soundService';
 import { GamePhase, PlayerState, CardData, CallType, Suit, ResponseRequest } from './types';
-import { AlertTriangle, Info, Hand, HelpCircle, X, PlayCircle, Flower2, Trophy, Ghost } from 'lucide-react';
+import { AlertTriangle, Info, Hand, HelpCircle, X, PlayCircle, Flower2, Trophy, Ghost, Swords, Ban } from 'lucide-react';
 
 const INITIAL_PLAYER: PlayerState = { name: "Jugador", hand: [], playedCards: [], points: 0, isHand: true, hasFlor: false, florPoints: 0 };
 const INITIAL_CPU: PlayerState = { name: "Computadora", hand: [], playedCards: [], points: 0, isHand: false, hasFlor: false, florPoints: 0 };
@@ -132,7 +132,7 @@ const App: React.FC = () => {
 
     const addMessage = (msg: string) => {
         setLastActionMessage(msg);
-        setTimeout(() => setLastActionMessage(""), 2500);
+        setTimeout(() => setLastActionMessage(""), 3000); 
     };
 
     // --- Core Cycle ---
@@ -178,7 +178,7 @@ const App: React.FC = () => {
             setLastCpuBluff(false);
             
             setPhase(pIsHand ? GamePhase.PlayerTurn : GamePhase.CpuTurn);
-            addMessage(pIsHand ? "Tu turno (Mano)" : "Turno CPU (Mano)");
+            addMessage(pIsHand ? "Tu turno (Eres Mano)" : "Turno CPU (Es Mano)");
         }, 2000); 
 
     }, []);
@@ -209,7 +209,7 @@ const App: React.FC = () => {
         playCardSound();
 
         const newHand = actor.hand.filter(c => c.id !== cardId);
-        const playedCard = { ...card, isCovered }; // Mark as covered if requested
+        const playedCard = { ...card, isCovered }; 
         const newPlayed = [...actor.playedCards, playedCard];
 
         if (who === 'player') {
@@ -271,15 +271,14 @@ const App: React.FC = () => {
                  }
 
                  if (handWinner) {
-                     // VALE JUEGO Logic: If trucoLevel is maxed (Vale Juego), winner completes their score to WIN_SCORE
                      let ptsToAdd = trucoLevel === 0 ? 1 : trucoLevel;
                      
                      if (trucoLevel >= WIN_SCORE) {
                          const currentScore = handWinner === 'player' ? player.points : cpu.points;
-                         ptsToAdd = WIN_SCORE - currentScore; // Add strictly what's needed
+                         ptsToAdd = WIN_SCORE - currentScore; 
                      }
 
-                     addMessage(handWinner === 'player' ? `¡Ganaste! (+${ptsToAdd})` : `Perdiste. (+${ptsToAdd})`);
+                     addMessage(handWinner === 'player' ? `¡Ganaste esta mano! (+${ptsToAdd})` : `Perdiste esta mano. (+${ptsToAdd})`);
                      
                      if (handWinner === 'player') setPlayer(p => ({...p, points: Math.min(WIN_SCORE, p.points + ptsToAdd)}));
                      else setCpu(c => ({...c, points: Math.min(WIN_SCORE, c.points + ptsToAdd)}));
@@ -642,8 +641,6 @@ const App: React.FC = () => {
                     else rejectPoints = 1;
                 }
                 
-                // If rejecting Vale Juego (Partido), typically you lose the points of the previous bet (e.g., 9)
-                
                 const winnerIsCaller = caller === 'player';
                 if (winnerIsCaller) setPlayer(p => ({...p, points: Math.min(WIN_SCORE, p.points + rejectPoints)}));
                 else setCpu(c => ({...c, points: Math.min(WIN_SCORE, c.points + rejectPoints)}));
@@ -689,51 +686,53 @@ const App: React.FC = () => {
         triggerRequest('player', type, call, pts);
     };
 
-    // --- Dynamic Controls ---
+    // --- Dynamic Controls (HUD moved to Bottom Right) ---
     const renderActionControls = () => {
         if (phase === GamePhase.GameOver) {
-            return ( <button onClick={() => window.location.reload()} className="px-6 py-3 md:px-8 md:py-4 bg-yellow-600 text-white font-bold text-lg md:text-xl rounded-full shadow-2xl animate-bounce">JUGAR OTRA VEZ</button> );
+            return ( <button onClick={() => window.location.reload()} className="px-6 py-3 md:px-8 md:py-4 bg-yellow-600 text-white font-bold text-lg md:text-xl rounded-full shadow-2xl animate-bounce pointer-events-auto">JUGAR OTRA VEZ</button> );
         }
 
+        // --- RESPONSE MODE (Responding to CPU) ---
         if (pendingResponse && pendingResponse.caller === 'cpu') {
             const { type, call } = pendingResponse;
             const isFlor = type === 'flor';
             
             return (
-                <div className="flex flex-col items-center w-full bg-black/60 p-2 md:p-4 rounded-xl backdrop-blur-md border border-red-500/50">
-                    <div className="text-white font-bold mb-2 md:mb-3 flex items-center text-sm md:text-xl animate-pulse">
-                        <AlertTriangle className="mr-2 text-yellow-500" size={20}/> CPU: {call.replace('Vale', '').toUpperCase()}
+                <div className="flex flex-col items-end gap-2 bg-black/80 p-3 md:p-4 rounded-xl border-l-4 border-red-500 shadow-2xl animate-in slide-in-from-right-10 pointer-events-auto max-w-[280px] md:max-w-sm">
+                    <div className="text-white font-bold mb-1 flex items-center justify-end text-sm md:text-base animate-pulse text-yellow-400 text-right">
+                         CPU CANTA: {call.replace('Vale', '').toUpperCase()} <AlertTriangle className="ml-2" size={18}/>
                     </div>
-                    <div className="flex flex-wrap justify-center gap-2 md:gap-3">
+                    
+                    <div className="grid grid-cols-2 gap-2 w-full">
                         {isFlor ? (
                             <>
-                                {player.hasFlor && <button onClick={() => handleResponse(true)} className="btn-action bg-pink-600">QUIERO CON FLOR</button>}
-                                <button onClick={() => handleResponse(false)} className="btn-action bg-gray-600">ES BUENA (NO TENGO)</button>
+                                {player.hasFlor && <button onClick={() => handleResponse(true)} className="btn-hud bg-pink-600 col-span-2">QUIERO CON FLOR</button>}
+                                <button onClick={() => handleResponse(false)} className="btn-hud bg-gray-600 col-span-2">ES BUENA (NO TENGO)</button>
                             </>
                         ) : (
                             <>
-                                <button onClick={() => handleResponse(true)} className="btn-action bg-green-600">QUIERO</button>
-                                <button onClick={() => handleResponse(false)} className="btn-action bg-red-600">NO QUIERO</button>
+                                <button onClick={() => handleResponse(true)} className="btn-hud bg-green-600 hover:bg-green-500 ring-1 ring-green-400">QUIERO</button>
+                                <button onClick={() => handleResponse(false)} className="btn-hud bg-red-600 hover:bg-red-500 ring-1 ring-red-400">NO QUIERO</button>
                                 
                                 {type === 'envido' && player.hasFlor && (
-                                     <button onClick={() => handleResponse(false, true, CallType.Flor)} className="btn-action bg-pink-600 border border-white animate-pulse shadow-[0_0_15px_rgba(219,39,119,0.8)]">¡TENGO FLOR!</button>
+                                     <button onClick={() => handleResponse(false, true, CallType.Flor)} className="btn-hud bg-pink-600 animate-pulse col-span-2">¡TENGO FLOR!</button>
                                 )}
 
                                 {type === 'truco' && (
                                     <>
-                                        {call === CallType.Truco && <button onClick={() => handleResponse(false, true, CallType.Retruco)} className="btn-action bg-orange-700">RETRUCO</button>}
-                                        {call === CallType.Retruco && <button onClick={() => handleResponse(false, true, CallType.ValeNueve)} className="btn-action bg-orange-800">VALE 9</button>}
-                                        {call === CallType.ValeNueve && <button onClick={() => handleResponse(false, true, CallType.ValeJuego)} className="btn-action bg-purple-800">PARTIDO</button>}
+                                        {call === CallType.Truco && <button onClick={() => handleResponse(false, true, CallType.Retruco)} className="btn-hud bg-orange-700 col-span-2">RETRUCO</button>}
+                                        {call === CallType.Retruco && <button onClick={() => handleResponse(false, true, CallType.ValeNueve)} className="btn-hud bg-orange-800 col-span-2">VALE 9</button>}
+                                        {call === CallType.ValeNueve && <button onClick={() => handleResponse(false, true, CallType.ValeJuego)} className="btn-hud bg-purple-800 col-span-2">PARTIDO</button>}
                                     </>
                                 )}
 
                                 {type === 'envido' && (
                                     <>
                                         {call === CallType.Envido && pendingResponse.pointsAtStake === 2 && (
-                                             <button onClick={() => handleResponse(false, true, CallType.Envido)} className="btn-action bg-green-700">ENVIDO (+2)</button>
+                                             <button onClick={() => handleResponse(false, true, CallType.Envido)} className="btn-hud bg-green-700 col-span-2">ENVIDO (+2)</button>
                                         )}
                                         {pendingResponse.pointsAtStake >= 4 && call !== CallType.ValeJuego && (
-                                            <button onClick={() => handleResponse(false, true, CallType.ValeJuego)} className="btn-action bg-purple-800">VALE JUEGO</button>
+                                            <button onClick={() => handleResponse(false, true, CallType.ValeJuego)} className="btn-hud bg-purple-800 col-span-2">VALE JUEGO</button>
                                         )}
                                     </>
                                 )}
@@ -744,6 +743,7 @@ const App: React.FC = () => {
             );
         }
 
+        // --- ACTION MODE (Player Turn) ---
         if (phase === GamePhase.PlayerTurn && !pendingResponse) {
             const isFirstRound = player.playedCards.length === 0;
             const canSingChant = isFirstRound && !chantState.called && !chantState.finished;
@@ -751,57 +751,81 @@ const App: React.FC = () => {
             const canSingRetruco = trucoLevel === 3 && lastTrucoCaller === 'cpu';
             const canSingVale9 = trucoLevel === 6 && lastTrucoCaller === 'cpu';
             const canSingJuego = trucoLevel === 9 && lastTrucoCaller === 'cpu';
-            const canPlayCovered = player.playedCards.length < 2; // Only in 1st or 2nd hand (0 or 1 played)
 
             return (
-                <div className="flex flex-col items-center space-y-2 md:space-y-3 w-full">
-                    {/* Action Buttons for Card Play */}
-                    {selectedCardId !== null && (
-                         <div className="flex items-center gap-2 animate-in fade-in zoom-in">
-                             <button onClick={() => handleHumanPlay(selectedCardId, false)} className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-1.5 px-6 md:py-2 md:px-8 rounded-full shadow-lg flex items-center text-sm md:text-lg">
-                                <PlayCircle className="mr-2" size={20} /> TIRAR
-                             </button>
-                             {canPlayCovered && (
-                                 <button onClick={() => handleHumanPlay(selectedCardId, true)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-1.5 px-4 md:py-2 md:px-6 rounded-full shadow-lg flex items-center text-xs md:text-sm border border-gray-400">
-                                    <Ghost className="mr-2" size={16} /> PASAR
-                                 </button>
-                             )}
-                         </div>
-                    )}
-
-                    <div className="flex flex-wrap justify-center gap-2 bg-black/40 p-2 md:p-3 rounded-xl backdrop-blur-sm border border-white/10 w-full max-w-2xl">
-                        {canSingChant && (
-                            <div className="flex gap-1 border-r border-white/20 pr-2 mr-1">
-                                {player.hasFlor ? (
-                                    <button onClick={() => userCalls('flor', CallType.Flor)} className="btn-action bg-pink-700 flex items-center"><Flower2 size={14} className="mr-1"/> FLOR</button>
-                                ) : (
-                                    <button onClick={() => userCalls('envido', CallType.Envido)} className="btn-action bg-green-700">Envido</button>
-                                )}
-                            </div>
-                        )}
+                <div className="flex flex-col items-end gap-3 pointer-events-auto">
+                    
+                    {/* Compact HUD Box */}
+                    <div className="bg-black/70 backdrop-blur-md p-2 rounded-xl border border-white/10 shadow-xl flex flex-col gap-2 min-w-[140px]">
                         
-                        <div className="flex flex-wrap justify-center gap-1">
-                            {canSingTruco && <button onClick={() => userCalls('truco', CallType.Truco)} className="btn-action bg-orange-600 font-black">TRUCO (3)</button>}
-                            {canSingRetruco && <button onClick={() => userCalls('truco', CallType.Retruco)} className="btn-action bg-orange-700 font-black">RETRUCO (6)</button>}
-                            {canSingVale9 && <button onClick={() => userCalls('truco', CallType.ValeNueve)} className="btn-action bg-orange-800 font-black">VALE 9</button>}
-                            {canSingJuego && <button onClick={() => userCalls('truco', CallType.ValeJuego)} className="btn-action bg-purple-900 font-black">PARTIDO</button>}
-                            
-                            <button onClick={() => { 
+                        {/* Truco Section */}
+                        <div className="flex flex-col gap-1 w-full">
+                             {canSingTruco && <button onClick={() => userCalls('truco', CallType.Truco)} className="btn-hud bg-orange-600 border-orange-400">TRUCO</button>}
+                             {canSingRetruco && <button onClick={() => userCalls('truco', CallType.Retruco)} className="btn-hud bg-orange-700 border-orange-500">RETRUCO</button>}
+                             {canSingVale9 && <button onClick={() => userCalls('truco', CallType.ValeNueve)} className="btn-hud bg-orange-800 border-orange-600">VALE 9</button>}
+                             {canSingJuego && <button onClick={() => userCalls('truco', CallType.ValeJuego)} className="btn-hud bg-purple-900 border-purple-600">PARTIDO</button>}
+                             
+                             {!canSingTruco && !canSingRetruco && !canSingVale9 && !canSingJuego && (
+                                 <div className="text-white/20 text-[10px] text-center uppercase font-bold py-1">Sin Truco</div>
+                             )}
+                        </div>
+
+                        <div className="h-px bg-white/10 w-full"></div>
+
+                        {/* Envido/Flor Section */}
+                        <div className="flex flex-col gap-1 w-full">
+                            {canSingChant && (
+                                <>
+                                    {player.hasFlor ? (
+                                        <button onClick={() => userCalls('flor', CallType.Flor)} className="btn-hud bg-pink-700 border-pink-500 flex items-center justify-center"><Flower2 size={14} className="mr-1"/> FLOR</button>
+                                    ) : (
+                                        <button onClick={() => userCalls('envido', CallType.Envido)} className="btn-hud bg-green-700 border-green-500">ENVIDO</button>
+                                    )}
+                                </>
+                            )}
+                             {!canSingChant && <div className="text-white/20 text-[10px] text-center uppercase font-bold py-1">Sin Canto</div>}
+                        </div>
+                        
+                        <div className="h-px bg-white/10 w-full"></div>
+
+                        {/* Fold */}
+                        <button onClick={() => { 
                                 const phrase = getRandomPhrase(PHRASES.fold);
                                 addMessage("ME FUI"); 
                                 speak(phrase, false); 
                                 setCpu(c => ({...c, points: Math.min(WIN_SCORE, c.points + (trucoLevel || 1))})); 
                                 startNewHand(); 
-                            }} className="btn-action bg-red-900 ml-1">
-                                ME VOY
-                            </button>
-                        </div>
+                        }} className="btn-hud bg-red-900/40 hover:bg-red-800 text-red-200 border-red-800/30 w-full flex items-center justify-center gap-1">
+                                <X size={14}/> ME VOY
+                        </button>
+
                     </div>
                 </div>
             );
         }
         return null;
     };
+
+    // --- SEPARATE PLAY BUTTON (Center Screen) ---
+    const renderPlayButton = () => {
+         const canPlayCovered = player.playedCards.length < 2; 
+
+         if (phase === GamePhase.PlayerTurn && !pendingResponse && selectedCardId !== null) {
+             return (
+                 <div className="absolute top-[-5rem] left-1/2 transform -translate-x-1/2 flex items-center gap-4 animate-in fade-in zoom-in pointer-events-auto z-50">
+                     <button onClick={() => handleHumanPlay(selectedCardId, false)} className="bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500 text-black font-black py-2 px-6 md:px-8 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.6)] flex items-center text-base md:text-lg border-2 border-white transform hover:scale-105 transition-all whitespace-nowrap">
+                        <PlayCircle className="mr-2" size={24} /> JUGAR CARTA
+                     </button>
+                     {canPlayCovered && (
+                         <button onClick={() => handleHumanPlay(selectedCardId, true)} className="bg-gray-700 hover:bg-gray-600 text-white font-bold p-3 rounded-full shadow-lg border border-gray-400" title="Jugar Tapada (Nula)">
+                            <Ghost size={20} />
+                         </button>
+                     )}
+                 </div>
+             );
+         }
+         return null;
+    }
 
 
     return (
@@ -826,7 +850,8 @@ const App: React.FC = () => {
                 </div>
             )}
             
-            <div className="absolute inset-2 md:inset-4 rounded-3xl felt-texture border-[8px] md:border-[16px] border-[#5d4037] shadow-[inset_0_0_100px_rgba(0,0,0,0.6)] flex flex-col z-0">
+            {/* Main Game Area */}
+            <div className="absolute inset-2 md:inset-4 rounded-3xl felt-texture border-[8px] md:border-[16px] border-[#3e2723] shadow-[inset_0_0_100px_rgba(0,0,0,0.6)] flex flex-col z-0">
                 <Table 
                     player={player} 
                     cpu={cpu} 
@@ -841,47 +866,51 @@ const App: React.FC = () => {
 
             <ScoreBoard playerScore={player.points} cpuScore={cpu.points} />
 
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center z-20 pointer-events-none">
-                <div className="pointer-events-auto max-w-4xl px-2 md:px-4 w-full flex justify-center">
-                    {renderActionControls()}
-                </div>
-            </div>
-
+            {/* MESSAGE TOAST (Top Center) */}
             {lastActionMessage && (
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-in zoom-in fade-in duration-300 pointer-events-none w-full flex justify-center px-4">
+                <div className="absolute top-[18%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none w-full flex justify-center px-4 animate-in slide-in-from-top-4 fade-in duration-300">
                     <div className={`
-                        px-4 py-2 md:px-8 md:py-4 rounded-xl text-lg md:text-2xl font-serif font-bold border shadow-xl text-center
+                        px-6 py-2 rounded-full text-sm md:text-xl font-bold border shadow-2xl text-center tracking-wider backdrop-blur-md
                         ${phase === GamePhase.GameOver 
-                            ? (player.points >= WIN_SCORE ? 'bg-yellow-600 text-white border-white scale-125' : 'bg-red-800 text-white border-red-500') 
-                            : 'bg-black/80 text-white border-yellow-500'}
+                            ? (player.points >= WIN_SCORE ? 'bg-yellow-600/90 text-white border-white scale-110' : 'bg-red-800/90 text-white border-red-500') 
+                            : 'bg-black/70 text-yellow-400 border-yellow-500/50'}
                     `}>
-                        {phase === GamePhase.GameOver && player.points >= WIN_SCORE && <Trophy className="inline-block mr-2 text-yellow-200 mb-1" size={24} />}
+                        {phase === GamePhase.GameOver && player.points >= WIN_SCORE && <Trophy className="inline-block mr-2 text-yellow-200 mb-1" size={20} />}
                         {lastActionMessage}
                     </div>
                 </div>
             )}
+
+            {/* CENTER PLAY BUTTON CONTAINER */}
+            <div className="absolute bottom-32 left-0 right-0 flex justify-center z-40 pointer-events-none">
+                 {renderPlayButton()}
+            </div>
+
+            {/* BOTTOM RIGHT ACTIONS CONTAINER (Response & Chanting) */}
+            <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8 z-50 flex flex-col items-end gap-4 pointer-events-none">
+                 {renderActionControls()}
+            </div>
             
             <style>{`
-                .btn-action {
-                    padding: 0.4rem 0.6rem;
-                    border-radius: 0.3rem;
+                .btn-hud {
+                    padding: 0.6rem 1rem;
+                    border-radius: 0.5rem;
                     color: white;
-                    font-weight: bold;
-                    font-size: 0.65rem;
+                    font-weight: 800;
+                    font-size: 0.75rem;
+                    line-height: 1;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
                     transition: all 0.2s;
                     text-transform: uppercase;
+                    border-width: 1px;
                 }
                 @media (min-width: 768px) {
-                    .btn-action {
-                        padding: 0.5rem 1rem;
-                        border-radius: 0.5rem;
+                    .btn-hud {
                         font-size: 0.85rem;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
                     }
                 }
-                .btn-action:hover { filter: brightness(1.1); transform: translateY(-2px); }
-                .btn-action:active { transform: translateY(0); }
+                .btn-hud:hover { filter: brightness(1.1); transform: translateX(-2px); }
+                .btn-hud:active { transform: translateX(0); filter: brightness(0.9); }
             `}</style>
         </div>
     );
