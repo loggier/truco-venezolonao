@@ -2,11 +2,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Table } from './components/Table';
 import { ScoreBoard } from './components/ScoreBoard';
+import { StatsModal } from './components/StatsModal';
 import { createDeck, WIN_SCORE } from './constants';
 import { determineWinner, calculateEnvidoPoints, calculateFlorPoints, checkHasFlor, shuffleDeck, calculateVenecoPower } from './services/trucoLogic';
 import { speak, playCardSound, playShuffleSound } from './services/soundService';
-import { GamePhase, PlayerState, CardData, CallType, Suit, ResponseRequest } from './types';
-import { AlertTriangle, Info, Hand, HelpCircle, X, PlayCircle, Flower2, Trophy, Ghost, Swords, Ban } from 'lucide-react';
+import { getStats, updateGameStats } from './services/storageService';
+import { GamePhase, PlayerState, CardData, CallType, Suit, ResponseRequest, GameStats } from './types';
+import { AlertTriangle, Info, Hand, HelpCircle, X, PlayCircle, Flower2, Trophy, Ghost, Swords, Ban, BarChart2 } from 'lucide-react';
 
 const INITIAL_PLAYER: PlayerState = { name: "Jugador", hand: [], playedCards: [], points: 0, isHand: true, hasFlor: false, florPoints: 0 };
 const INITIAL_CPU: PlayerState = { name: "Computadora", hand: [], playedCards: [], points: 0, isHand: false, hasFlor: false, florPoints: 0 };
@@ -104,6 +106,8 @@ const App: React.FC = () => {
     const [cpu, setCpu] = useState<PlayerState>(INITIAL_CPU);
     const [phase, setPhase] = useState<GamePhase>(GamePhase.Dealing);
     const [showHelp, setShowHelp] = useState(false);
+    const [showStats, setShowStats] = useState(false);
+    const [stats, setStats] = useState<GameStats>(getStats());
     
     const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
     
@@ -185,17 +189,32 @@ const App: React.FC = () => {
 
     useEffect(() => {
         startNewHand();
+        setStats(getStats());
     }, []);
 
+    // Game Over & Stats Update Logic
     useEffect(() => {
+        if (phase === GamePhase.GameOver) return; // Prevent loop
+
         if (player.points >= WIN_SCORE) {
             setPhase(GamePhase.GameOver);
             addMessage("¡GANASTE EL PARTIDO!");
             speak("¡Ganaste el partido! Bien jugado chamo.", false);
+            
+            // Update Stats
+            const newStats = updateGameStats(true, player.points);
+            setStats(newStats);
+            setTimeout(() => setShowStats(true), 1500); // Auto show stats on win
+
         } else if (cpu.points >= WIN_SCORE) {
             setPhase(GamePhase.GameOver);
             addMessage("¡LA CPU GANÓ EL PARTIDO!");
             speak("Ja ja ja, gané el partido. Más suerte la próxima.", true);
+            
+            // Update Stats
+            const newStats = updateGameStats(false, player.points);
+            setStats(newStats);
+            setTimeout(() => setShowStats(true), 1500);
         }
     }, [player.points, cpu.points]);
 
@@ -832,11 +851,15 @@ const App: React.FC = () => {
         <div className="w-screen h-screen bg-neutral-900 overflow-hidden relative flex flex-col font-sans select-none">
             {phase === GamePhase.GameOver && player.points >= WIN_SCORE && <Confetti />}
 
-            <button onClick={() => setShowHelp(true)} className="absolute top-2 left-2 md:top-4 md:left-4 z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm"><HelpCircle size={20} className="md:w-7 md:h-7" /></button>
+            <div className="absolute top-2 left-2 md:top-4 md:left-4 z-50 flex gap-2">
+                <button onClick={() => setShowHelp(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm" title="Ayuda"><HelpCircle size={20} className="md:w-7 md:h-7" /></button>
+                <button onClick={() => setShowStats(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-yellow-400 transition-all backdrop-blur-sm" title="Estadísticas"><BarChart2 size={20} className="md:w-7 md:h-7" /></button>
+            </div>
             
+            {/* Help Modal */}
             {showHelp && (
                 <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                    <div className="bg-[#5d4037] border-4 border-yellow-600 rounded-lg max-w-lg w-full p-6 text-yellow-100 shadow-2xl">
+                    <div className="bg-[#5d4037] border-4 border-yellow-600 rounded-lg max-w-lg w-full p-6 text-yellow-100 shadow-2xl relative">
                         <button onClick={() => setShowHelp(false)} className="absolute top-2 right-2 p-1 hover:bg-black/20 rounded-full"><X size={24} /></button>
                         <h2 className="text-xl md:text-2xl font-bold font-serif text-center mb-4 text-yellow-400">Truco Venezolano</h2>
                         <ul className="space-y-2 text-sm md:text-base">
@@ -849,6 +872,9 @@ const App: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Stats Modal */}
+            {showStats && <StatsModal stats={stats} onClose={() => setShowStats(false)} />}
             
             {/* Main Game Area */}
             <div className="absolute inset-2 md:inset-4 rounded-3xl felt-texture border-[8px] md:border-[16px] border-[#3e2723] shadow-[inset_0_0_100px_rgba(0,0,0,0.6)] flex flex-col z-0">

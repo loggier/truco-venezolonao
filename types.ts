@@ -74,3 +74,12 @@ export interface GameState {
     
     messages: string[];
 }
+
+export interface GameStats {
+    wins: number;
+    losses: number;
+    gamesPlayed: number;
+    currentStreak: number;
+    bestStreak: number;
+    totalPointsScored: number; // Total points scored by player across all games
+}
